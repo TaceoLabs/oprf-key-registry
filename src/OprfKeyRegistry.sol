@@ -790,7 +790,7 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
         // delete the old commitments now
         delete st.shareCommitments;
         st.shareCommitments = new Types.BabyJubJubElement[](numPeers);
-        emit Types.SecretGenRound2(oprfKeyId);
+        emit Types.SecretGenRound2(oprfKeyId, st.generatedEpoch);
     }
 
     function _tryEmitRound3Event(uint160 oprfKeyId, uint256 necessaryContributions, Types.OprfKeyGenState storage st)
