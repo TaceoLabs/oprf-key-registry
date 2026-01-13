@@ -303,7 +303,8 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
     /// @notice Adds a Round 1 contribution to the key generation process. Only callable by registered OPRF peers.
     /// @param oprfKeyId The unique identifier for the key-gen.
     /// @param data The Round 1 contribution data. See `Types.Round1Contribution` for details.
-    function addRound1KeyGenContribution(uint160 oprfKeyId, Types.Round1Contribution calldata data)
+    /// @param nonce The nonce send by the oprf node.
+    function addRound1KeyGenContribution(uint160 oprfKeyId, Types.Round1Contribution calldata data, uint256 nonce)
         external
         virtual
         onlyProxy
@@ -326,7 +327,7 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
         // everyone is a producer therefore we wait for numPeers amount producers
         _tryEmitRound2Event(oprfKeyId, numPeers, st);
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
+        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch, nonce);
     }
 
     /// @notice Adds a Round 1 contribution to the re-sharing process. Only callable by registered OPRF peers. This method does some more work than the basic key-gen.
@@ -334,7 +335,8 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
     ///
     /// @param oprfKeyId The unique identifier for the key-gen.
     /// @param data The Round 1 contribution data. See `Types.Round1Contribution` for details.
-    function addRound1ReshareContribution(uint160 oprfKeyId, Types.Round1Contribution calldata data)
+    /// @param nonce The nonce send by the oprf node.
+    function addRound1ReshareContribution(uint160 oprfKeyId, Types.Round1Contribution calldata data, uint256 nonce)
         external
         virtual
         onlyProxy
@@ -390,7 +392,7 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
         // we need a contribution from everyone but only threshold many producers. If we don't manage to find enough producers, we will emit an event so that the admin can intervene.
         _tryEmitRound2Event(oprfKeyId, threshold, st);
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
+        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch, nonce);
     }
 
     /// @notice Adds a Round 2 contribution to the key generation process. Only callable by registered OPRF peers. Is the same for key-gen and reshare, with the small difference with how the commitments for next reshare are computed and that we need less producers for reshare.
@@ -398,7 +400,7 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
     /// @param oprfKeyId The unique identifier for the key-gen.
     /// @param data The Round 2 contribution data. See `Types.Round2Contribution` for details.
     /// @dev This internally verifies the Groth16 proof provided in the contribution data to ensure it is constructed correctly.
-    function addRound2Contribution(uint160 oprfKeyId, Types.Round2Contribution calldata data)
+    function addRound2Contribution(uint160 oprfKeyId, Types.Round2Contribution calldata data, uint256 nonce)
         external
         virtual
         onlyProxy
@@ -513,14 +515,15 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
             revert UnsupportedNumPeersThreshold();
         }
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 2, st.generatedEpoch);
+        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 2, st.generatedEpoch, nonce);
     }
 
     /// @notice Adds a Round 3 contribution to the key generation process. Only callable by registered OPRF peers. This is exactly the same process for key-gen and reshare because nodes just acknowledge that they received their ciphertexts.
     ///
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     /// @dev This does not require any calldata, as it is simply an acknowledgment from the peer that is is done.
-    function addRound3Contribution(uint160 oprfKeyId) external virtual onlyProxy isReady {
+    /// @param nonce The nonce send by the oprf node.
+    function addRound3Contribution(uint160 oprfKeyId, uint256 nonce) external virtual onlyProxy isReady {
         // check that we started the key-gen for this OPRF public-key.
         Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         if (!st.exists) revert UnknownId(oprfKeyId);
@@ -557,7 +560,7 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
             st.finalizeEventEmitted = true;
         }
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 3, st.generatedEpoch);
+        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 3, st.generatedEpoch, nonce);
     }
 
     // ==================================
