@@ -48,6 +48,7 @@ library Types {
         Round1Contribution[] round1;
         SecretGenCiphertext[][] round2;
         BabyJubJubElement[] shareCommitments;
+        BabyJubJubElement[] prevShareCommitments;
         BabyJubJubElement keyAggregate;
         uint128 numProducers;
         uint128 generatedEpoch;
@@ -83,6 +84,7 @@ library Types {
     event ReshareRound3(uint160 indexed oprfKeyId, uint256[] lagrange, uint128 indexed epoch);
     // event to delete created key
     event KeyDeletion(uint160 indexed oprfKeyId);
+    event KeyReshareAborted(uint160 indexed oprfKeyId);
     // admin events
     event KeyGenAdminRevoked(address indexed admin);
     event KeyGenAdminRegistered(address indexed admin);

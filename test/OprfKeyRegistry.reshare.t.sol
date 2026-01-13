@@ -195,5 +195,31 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         assertEq(oprfKeyAndEpoch.key.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
         assertEq(oprfKeyAndEpoch.epoch, generatedEpoch);
     }
+
+   function testKeyGenReshareAbortBeforeRound1() public {
+        // make a normal key-gen for id 42;
+        testKeyGen();
+        uint160 oprfKeyId = 42;
+        vm.prank(taceoAdmin);
+        vm.expectEmit(true, true, true, true);
+        emit Types.ReshareRound1(oprfKeyId, THRESHOLD, 1);
+        oprfKeyRegistry.initReshare(oprfKeyId);
+        vm.stopPrank();
+
+        // abort before round 1
+        vm.prank(taceoAdmin);
+        vm.expectEmit(true, true, true, true);
+        emit Types.KeyReshareAborted(oprfKeyId);
+        oprfKeyRegistry.abortReshare(oprfKeyId);
+        vm.stopPrank();
+
+        // can start a new reshare
+        vm.prank(taceoAdmin);
+        vm.expectEmit(true, true, true, true);
+        emit Types.ReshareRound1(oprfKeyId, THRESHOLD, 1);
+        oprfKeyRegistry.initReshare(oprfKeyId);
+        vm.stopPrank();
+    }
 }
+
 
