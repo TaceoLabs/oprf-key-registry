@@ -334,8 +334,7 @@ contract OprfKeyRegistryTest is Test {
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
-            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob}),
-            0
+            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob})
         );
         vm.stopPrank();
 
@@ -362,11 +361,10 @@ contract OprfKeyRegistryTest is Test {
         // do round 1 contributions
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0, 0);
+        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
-            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob}),
-            0
+            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob})
         );
         vm.stopPrank();
 
@@ -383,8 +381,7 @@ contract OprfKeyRegistryTest is Test {
             oprfKeyId,
             Types.Round1Contribution({
                 commShare: commShareAlice, commCoeffs: commCoeffsAlice, ephPubKey: publicKeyAlice
-            }),
-            1
+            })
         );
         vm.stopPrank();
 
@@ -410,42 +407,39 @@ contract OprfKeyRegistryTest is Test {
         // do round 1 contributions
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0, 0);
+        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
-            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob}),
-            0
+            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob})
         );
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, 0, 1);
+        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
             Types.Round1Contribution({
                 commShare: commShareAlice, commCoeffs: commCoeffsAlice, ephPubKey: publicKeyAlice
-            }),
-            1
+            })
         );
         vm.stopPrank();
 
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, 0, 2);
+        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
             Types.Round1Contribution({
                 commShare: commShareCarol, commCoeffs: commCoeffsCarol, ephPubKey: publicKeyCarol
-            }),
-            2
+            })
         );
         vm.stopPrank();
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0, 3);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, bobRound2Contribution(), 3);
+        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, bobRound2Contribution());
         vm.stopPrank();
 
         vm.prank(taceoAdmin);
@@ -458,7 +452,7 @@ contract OprfKeyRegistryTest is Test {
         vm.recordLogs();
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, aliceRound2Contribution(), 4);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, aliceRound2Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
@@ -483,61 +477,58 @@ contract OprfKeyRegistryTest is Test {
         // do round 1 contributions
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0, 0);
+        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
-            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob}),
-            0
+            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob})
         );
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, 0, 1);
+        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
             Types.Round1Contribution({
                 commShare: commShareAlice, commCoeffs: commCoeffsAlice, ephPubKey: publicKeyAlice
-            }),
-            1
+            })
         );
         vm.stopPrank();
 
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, 0, 2);
+        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
             Types.Round1Contribution({
                 commShare: commShareCarol, commCoeffs: commCoeffsCarol, ephPubKey: publicKeyCarol
-            }),
-            2
+            })
         );
         vm.stopPrank();
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0, 3);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, bobRound2Contribution(), 3);
+        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, bobRound2Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 2, 0, 4);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, aliceRound2Contribution(), 4);
+        emit Types.KeyGenConfirmation(oprfKeyId, 0, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, aliceRound2Contribution());
         vm.stopPrank();
 
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 2, 0, 5);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, carolRound2Contribution(), 5);
+        emit Types.KeyGenConfirmation(oprfKeyId, 2, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, carolRound2Contribution());
         vm.stopPrank();
 
         // do round 3 contributions
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, 0, 6);
-        oprfKeyRegistry.addRound3Contribution(oprfKeyId, 6);
+        emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, 0);
+        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.prank(taceoAdmin);
@@ -550,7 +541,7 @@ contract OprfKeyRegistryTest is Test {
         vm.recordLogs();
         vm.prank(bob);
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.addRound3Contribution(oprfKeyId, 7);
+        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.prank(alice);
@@ -580,23 +571,21 @@ contract OprfKeyRegistryTest is Test {
         // do round 1 contributions
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0, 0);
+        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
-            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob}),
-            0
+            Types.Round1Contribution({commShare: commShareBob, commCoeffs: commCoeffsBob, ephPubKey: publicKeyBob})
         );
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, 0, 1);
+        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
             Types.Round1Contribution({
                 commShare: commShareAlice, commCoeffs: commCoeffsAlice, ephPubKey: publicKeyAlice
-            }),
-            1
+            })
         );
         vm.stopPrank();
 
@@ -604,56 +593,55 @@ contract OprfKeyRegistryTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Types.SecretGenRound2(oprfKeyId, 0);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, 0, 2);
+        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(
             oprfKeyId,
             Types.Round1Contribution({
                 commShare: commShareCarol, commCoeffs: commCoeffsCarol, ephPubKey: publicKeyCarol
-            }),
-            2
+            })
         );
         vm.stopPrank();
 
         // do round 2 contributions
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0, 3);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, bobRound2Contribution(), 3);
+        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, bobRound2Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 2, 0, 4);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, aliceRound2Contribution(), 4);
+        emit Types.KeyGenConfirmation(oprfKeyId, 0, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, aliceRound2Contribution());
         vm.stopPrank();
 
         vm.expectEmit(true, true, true, true);
         emit Types.SecretGenRound3(oprfKeyId);
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 2, 0, 5);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, carolRound2Contribution(), 5);
+        emit Types.KeyGenConfirmation(oprfKeyId, 2, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, carolRound2Contribution());
         vm.stopPrank();
 
         // do round 3 contributions
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, 0, 6);
-        oprfKeyRegistry.addRound3Contribution(oprfKeyId, 6);
+        emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, 0);
+        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 3, 0, 7);
-        oprfKeyRegistry.addRound3Contribution(oprfKeyId, 7);
+        emit Types.KeyGenConfirmation(oprfKeyId, 1, 3, 0);
+        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.expectEmit(true, true, true, true);
         emit Types.SecretGenFinalize(oprfKeyId, 0);
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 3, 0, 8);
-        oprfKeyRegistry.addRound3Contribution(oprfKeyId, 8);
+        emit Types.KeyGenConfirmation(oprfKeyId, 2, 3, 0);
+        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         // check that the computed nullifier is correct
