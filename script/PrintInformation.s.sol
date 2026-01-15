@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Script, console} from "forge-std/Script.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 
-contract InitKeyGenScript is Script {
+contract PrintInformationScript is Script {
     OprfKeyRegistry public oprfKeyRegistry;
 
     function setUp() public {
