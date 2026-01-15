@@ -36,7 +36,11 @@ interface IBabyJubJub {
     function scalarMul(uint256 scalar, uint256 x, uint256 y) external pure returns (uint256 x_res, uint256 y_res);
 }
 
-contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
+interface IOprfKeyRegistry {
+    function initKeyGen(uint160 oprfKeyId) external;
+}
+
+contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
     using Types for Types.BabyJubJubElement;
     using Types for Types.Groth16Proof;
     using Types for Types.OprfPeer;
