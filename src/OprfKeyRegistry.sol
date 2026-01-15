@@ -534,6 +534,9 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
         if (st.round3Done[partyId]) revert AlreadySubmitted();
         st.round3Done[partyId] = true;
 
+        // load generated epoch before delete to emit correct value
+        uint128 generatedEpoch = st.generatedEpoch;
+
         if (allRound3Submitted(st)) {
             // We are done! Register the OPRF public-key and emit event!
             if (st.generatedEpoch == 0) {
@@ -557,7 +560,7 @@ contract OprfKeyRegistry is Initializable, Ownable2StepUpgradeable, UUPSUpgradea
             st.finalizeEventEmitted = true;
         }
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 3, st.generatedEpoch);
+        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 3, generatedEpoch);
     }
 
     // ==================================
