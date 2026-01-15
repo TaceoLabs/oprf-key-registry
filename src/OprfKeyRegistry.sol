@@ -210,6 +210,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     /// @notice Initializes the key generation process. Tries to use the provided oprfKeyId as identifier. If the identifier is already taken, reverts the transaction.
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     function initKeyGen(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
+        if (oprfKeyId == 0) revert BadContribution();
         // Check that this oprfKeyId was not used already
         Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         if (st.exists) revert AlreadySubmitted();

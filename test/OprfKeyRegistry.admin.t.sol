@@ -231,11 +231,19 @@ contract OprfKeyRegistryTest is Test {
 
         // try start key-gen as taceo
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.OnlyAdmin.selector));
-        oprfKeyRegistry.initKeyGen(0);
+        oprfKeyRegistry.initKeyGen(1);
         vm.stopPrank();
 
         // start key-gen as alice
         vm.prank(alice);
+        oprfKeyRegistry.initKeyGen(1);
+        vm.stopPrank();
+    }
+
+    function testCannotInitKeyGenWithIdZero() public {
+        vm.startPrank(taceoAdmin);
+        // try start key-gen as taceo
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.BadContribution.selector));
         oprfKeyRegistry.initKeyGen(0);
         vm.stopPrank();
     }
@@ -269,10 +277,10 @@ contract OprfKeyRegistryTest is Test {
 
     function testInitKeyGenResubmit() public {
         vm.prank(taceoAdmin);
-        oprfKeyRegistry.initKeyGen(0);
+        oprfKeyRegistry.initKeyGen(1);
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.AlreadySubmitted.selector));
         vm.prank(taceoAdmin);
-        oprfKeyRegistry.initKeyGen(0);
+        oprfKeyRegistry.initKeyGen(1);
     }
 
     function testDeleteBeforeRound1() public {
