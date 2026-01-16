@@ -220,6 +220,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
         }
         st.shareCommitments = new Types.BabyJubJubElement[](numPeers);
+        st.prevShareCommitments = new Types.BabyJubJubElement[](numPeers);
         st.round2Done = new bool[](numPeers);
         st.round3Done = new bool[](numPeers);
         st.exists = true;
@@ -275,6 +276,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             delete st.round1;
             delete st.round2;
             delete st.shareCommitments;
+            delete st.prevShareCommitments;
             delete st.keyAggregate;
             delete st.numProducers;
             delete st.round2Done;
@@ -298,6 +300,35 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (needToEmitEvent) {
             emit Types.KeyDeletion(oprfKeyId);
         }
+    }
+
+    /// @notice Aborts an in-progress OPRF key-gen process. A caller should call initKeyGen again if the generation should be redone.
+    //
+    /// @param oprfKeyId The unique identifier for the OPRF public-key.
+    function abortKeygen(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
+        // Get the key-gen state for this key and check that generated epoch is 0
+        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        if (!st.exists) {
+            revert UnknownId(oprfKeyId);
+        }
+        if (st.generatedEpoch != 0) {
+            revert BadContribution();
+        }
+        st.exists = false;
+        _abortKeyGenState(st, oprfKeyId, 0);
+    }
+
+    /// @notice Aborts an in-progress OPRF re-share process. Does not delete the existing OPRF public-key, but only the running key-gen state.
+    /// @param oprfKeyId The unique identifier for the OPRF public-key.
+    function abortReshare(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
+        Types.RegisteredOprfPublicKey memory oprfPublicKey = oprfKeyRegistry[oprfKeyId];
+        if (_isEmpty(oprfPublicKey.key)) revert UnknownId(oprfKeyId);
+        // Get the key-gen state for this key and reset everything
+        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        if (!st.exists) {
+            revert UnknownId(oprfKeyId);
+        }
+        _abortKeyGenState(st, oprfKeyId, oprfPublicKey.epoch);
     }
 
     // ==================================
@@ -369,7 +400,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             // both commitments are set and we still need more producers
             _curveChecks(data.commShare);
             // in contrast to key-gen we don't compute the running total, but we can check whether the commitments are correct from the previous reshare/key-gen.
-            Types.BabyJubJubElement memory shouldCommitment = st.shareCommitments[partyId];
+            Types.BabyJubJubElement memory shouldCommitment = st.prevShareCommitments[partyId];
             if (!_isEqual(shouldCommitment, data.commShare)) {
                 revert BadContribution();
             }
@@ -549,10 +580,13 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
                 // we simply increase the current epoch
                 oprfKeyRegistry[oprfKeyId].epoch = st.generatedEpoch;
             }
+            // Save the current share commitments for the next reshare
+            st.prevShareCommitments = st.shareCommitments;
 
             emit Types.SecretGenFinalize(oprfKeyId, st.generatedEpoch);
             // cleanup all old data - we need to keep shareCommitments though otherwise we can't do reshares
             delete st.lagrangeCoeffs;
+            delete st.shareCommitments;
             delete st.round1;
             delete st.round2;
             delete st.keyAggregate;
@@ -794,8 +828,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
 
         st.round2EventEmitted = true;
-        // delete the old commitments now
-        delete st.shareCommitments;
         st.shareCommitments = new Types.BabyJubJubElement[](numPeers);
         emit Types.SecretGenRound2(oprfKeyId, st.generatedEpoch);
     }
@@ -868,6 +900,36 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         ) {
             revert BadContribution();
         }
+    }
+
+    /// @notice Resets the specified key-gen state. Used to abort key-gens/reshare. Will emit an KeyReshareAborted event.
+    //
+    /// @param st The key-gen state.
+    /// @param oprfKeyId The id of the key-gen state.
+    /// @param oldEpoch The old epoch.
+    function _abortKeyGenState(Types.OprfKeyGenState storage st, uint160 oprfKeyId, uint128 oldEpoch) internal virtual {
+        // we need to leave the previous share commitments to check the peers are using the correct input
+        delete st.shareCommitments;
+        delete st.lagrangeCoeffs;
+        delete st.numProducers;
+        delete st.keyAggregate;
+        delete st.round2Done;
+        delete st.round3Done;
+        delete st.round2EventEmitted;
+        delete st.round3EventEmitted;
+        delete st.finalizeEventEmitted;
+        st.lagrangeCoeffs = new uint256[](threshold);
+        st.round1 = new Types.Round1Contribution[](numPeers);
+        st.round2 = new Types.SecretGenCiphertext[][](numPeers);
+        for (uint256 i = 0; i < numPeers; i++) {
+            delete st.nodeRoles[peerAddresses[i]];
+            st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
+        }
+        st.round2Done = new bool[](numPeers);
+        st.round3Done = new bool[](numPeers);
+        st.generatedEpoch = oldEpoch;
+
+        emit Types.KeyReshareAborted(oprfKeyId);
     }
     ////////////////////////////////////////////////////////////
     //                    Upgrade Authorization               //
