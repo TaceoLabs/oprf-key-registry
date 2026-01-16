@@ -1,23 +1,51 @@
-# OPRF Safe Deployment
+# Deploy Smart Contracts via Safe-Wallet MultiSig
 
-Deploy OPRF contracts through a Safe multi-sig wallet.
+Using https://app.safe.global/
 
-## Setup
+This TS project performs the same steps known from `contracts/script/deploy` but creates a transaction via Safe-Wallet. If one deployment definition changes, the other one should be changed as well.
+
+## Initial Setup
 
 ```bash
-cd deploy-safe
-npm install
+cd contracts/deploy-safe-wallet
+npm install  ## tested with npm 10.8.1
 cp .env.example .env
 # Edit .env with your values
 ```
 
-## Usage
+Creating the transaction requires an ETH private key, so at least one wallet of the MultiSig cannot be a hardware wallet. 
+
+## Deploy to World Mainnet
+
+There exist multiple targets as defined in `contracts/deploy-safe-wallet/package.json`
+
+Key Registry with Deps
+```bash
+just deploy-safe-wallet-oprf-key-registry-with-deps mainnet
+```
+
+
+Key Registry
+```bash
+just deploy-safe-wallet-oprf-key-registry mainnet
+```
+
+Other supported arguments besides `mainnet` for testing are:
+  - `local`
+  - `sepolia`
+
+## Testing with local anvil Sepolia fork
 
 ### Step 1: Test locally on forked Sepolia
 
+Define `ETH_RPC` env var
 ```bash
-# Terminal 1: Start Anvil fork
-anvil --fork-url https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+export ETH_RPC=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+```
+
+```bash
+# Terminal 1: Start Anvil fork (tested with anvil Version: 1.3.5-stable)
+anvil --fork-url $ETH_RPC
 
 # Terminal 2: Run deployment
 npm run deploy:local
@@ -74,3 +102,5 @@ deploy-safe/
 | `NUM_PEERS` | OPRF peer count |
 | `DEPLOY_SALT` | CREATE2 salt for deterministic addresses |
 | `*_RPC_URL` | RPC endpoints for each network |
+| `ACCUMULATOR_ADDRESS` | define address when using deployOprfKeyRegistry |
+| `KEY_GEN_VERIFIER_ADDRESS` | define address when using deployOprfKeyRegistry |

@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "deploy:local": "tsx src/deploy.ts --network local",
-    "deploy:sepolia": "tsx src/deploy.ts --network sepolia",
-    "deploy:mainnet": "tsx src/deploy.ts --network mainnet"
+    "deployOprfKeyRegistryWithDeps:local": "tsx src/deployOprfKeyRegistryWithDeps.ts --network local",
+    "deployOprfKeyRegistryWithDeps:sepolia": "tsx src/deployOprfKeyRegistryWithDeps.ts --network sepolia",
+    "deployOprfKeyRegistryWithDeps:mainnet": "tsx src/deployOprfKeyRegistryWithDeps.ts --network mainnet",
+    "deployOprfKeyRegistry:local": "tsx src/deployOprfKeyRegistry.ts --network local",
+    "deployOprfKeyRegistry:sepolia": "tsx src/deployOprfKeyRegistry.ts --network sepolia",
+    "deployOprfKeyRegistry:mainnet": "tsx src/deployOprfKeyRegistry.ts --network mainnet"
   },
   "dependencies": {
     "@safe-global/protocol-kit": "^5.0.4",

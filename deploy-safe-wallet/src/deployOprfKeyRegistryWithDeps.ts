@@ -99,9 +99,9 @@ async function buildDeploymentTransactions(config: DeploymentConfig): Promise<{
   // Select verifier based on threshold/numPeers
   let verifierArtifact: Artifact
   if (threshold === 2 && numPeers === 3) {
-    verifierArtifact = loadArtifact('Groth16VerifierKeyGen13.sol/Groth16Verifier.json')
-  } else if (threshold === 2 && numPeers === 5) {
-    verifierArtifact = loadArtifact('Groth16VerifierKeyGen25.sol/Groth16Verifier.json')
+    verifierArtifact = loadArtifact('VerifierKeyGen13.sol/Verifier.json')
+  } else if (threshold === 3 && numPeers === 5) {
+    verifierArtifact = loadArtifact('VerifierKeyGen25.sol/Verifier.json')
   } else {
     throw new Error(`Unsupported threshold/numPeers combination: ${threshold}/${numPeers}`)
   }
