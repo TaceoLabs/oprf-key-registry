@@ -303,7 +303,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     }
 
     /// @notice Aborts an in-progress OPRF key-gen process. A caller should call initKeyGen again if the generation should be redone.
-    // 
+    //
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     function abortKeygen(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
         // Get the key-gen state for this key and check that generated epoch is 0
