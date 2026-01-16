@@ -302,6 +302,22 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
+    /// @notice Aborts an in-progress OPRF key-gen process. A caller should call initKeyGen again if the generation should be redone.
+    // 
+    /// @param oprfKeyId The unique identifier for the OPRF public-key.
+    function abortKeygen(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
+        // Get the key-gen state for this key and check that generated epoch is 0
+        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        if (!st.exists) {
+            revert UnknownId(oprfKeyId);
+        }
+        if (st.generatedEpoch != 0) {
+            revert BadContribution();
+        }
+        st.exists = false;
+        _abortKeyGenState(st, oprfKeyId, 0);
+    }
+
     /// @notice Aborts an in-progress OPRF re-share process. Does not delete the existing OPRF public-key, but only the running key-gen state.
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     function abortReshare(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
@@ -312,27 +328,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (!st.exists) {
             revert UnknownId(oprfKeyId);
         }
-        // we need to leave the previous share commitments to check the peers are using the correct input
-        delete st.shareCommitments;
-        delete st.lagrangeCoeffs;
-        delete st.numProducers;
-        delete st.round2Done;
-        delete st.round3Done;
-        delete st.round2EventEmitted;
-        delete st.round3EventEmitted;
-        delete st.finalizeEventEmitted;
-        st.lagrangeCoeffs = new uint256[](threshold);
-        st.round1 = new Types.Round1Contribution[](numPeers);
-        st.round2 = new Types.SecretGenCiphertext[][](numPeers);
-        for (uint256 i = 0; i < numPeers; i++) {
-            delete st.nodeRoles[peerAddresses[i]];
-            st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
-        }
-        st.round2Done = new bool[](numPeers);
-        st.round3Done = new bool[](numPeers);
-        st.generatedEpoch = oprfPublicKey.epoch;
-
-        emit Types.KeyReshareAborted(oprfKeyId);
+        _abortKeyGenState(st, oprfKeyId, oprfPublicKey.epoch);
     }
 
     // ==================================
@@ -904,6 +900,36 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         ) {
             revert BadContribution();
         }
+    }
+
+    /// @notice Resets the specified key-gen state. Used to abort key-gens/reshare. Will emit an KeyReshareAborted event.
+    //
+    /// @param st The key-gen state.
+    /// @param oprfKeyId The id of the key-gen state.
+    /// @param oldEpoch The old epoch.
+    function _abortKeyGenState(Types.OprfKeyGenState storage st, uint160 oprfKeyId, uint128 oldEpoch) internal virtual {
+        // we need to leave the previous share commitments to check the peers are using the correct input
+        delete st.shareCommitments;
+        delete st.lagrangeCoeffs;
+        delete st.numProducers;
+        delete st.keyAggregate;
+        delete st.round2Done;
+        delete st.round3Done;
+        delete st.round2EventEmitted;
+        delete st.round3EventEmitted;
+        delete st.finalizeEventEmitted;
+        st.lagrangeCoeffs = new uint256[](threshold);
+        st.round1 = new Types.Round1Contribution[](numPeers);
+        st.round2 = new Types.SecretGenCiphertext[][](numPeers);
+        for (uint256 i = 0; i < numPeers; i++) {
+            delete st.nodeRoles[peerAddresses[i]];
+            st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
+        }
+        st.round2Done = new bool[](numPeers);
+        st.round3Done = new bool[](numPeers);
+        st.generatedEpoch = oldEpoch;
+
+        emit Types.KeyReshareAborted(oprfKeyId);
     }
     ////////////////////////////////////////////////////////////
     //                    Upgrade Authorization               //
