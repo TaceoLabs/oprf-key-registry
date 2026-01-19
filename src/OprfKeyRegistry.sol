@@ -759,7 +759,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (!st.exists) revert UnknownId(oprfKeyId);
         // check if the OPRF public-key was deleted in the meantime
         if (st.deleted) revert DeletedId(oprfKeyId);
-        // if (st.round2EventEmitted) revert WrongRound();
+        if (st.round2EventEmitted) revert WrongRound();
 
         // check that we don't have double submission
         if (!_isEmpty(st.round1[partyId].commShare)) revert AlreadySubmitted();
@@ -897,6 +897,10 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             // this is a key-gen, set exists to false
             st.exists = false;
         }
+        // we set all events to emitted because key-gen/reshare will reset everything
+        st.round2EventEmitted = true;
+        st.round3EventEmitted = true;
+        st.finalizeEventEmitted = true;
         emit Types.KeyGenAbort(oprfKeyId);
     }
 
