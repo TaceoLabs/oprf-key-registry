@@ -226,7 +226,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
     function abortKeygen(uint160 oprfKeyId) internal {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyReshareAborted(oprfKeyId);
+        emit Types.KeyGenAbort(oprfKeyId);
         oprfKeyRegistry.abortKeygen(oprfKeyId);
         vm.stopPrank();
     }

@@ -902,7 +902,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
-    /// @notice Resets the specified key-gen state. Used to abort key-gens/reshare. Will emit an KeyReshareAborted event.
+    /// @notice Resets the specified key-gen state. Used to abort key-gens/reshare. Will emit an KeyGenAbort event.
     //
     /// @param st The key-gen state.
     /// @param oprfKeyId The id of the key-gen state.
@@ -929,7 +929,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         st.round3Done = new bool[](numPeers);
         st.generatedEpoch = oldEpoch;
 
-        emit Types.KeyReshareAborted(oprfKeyId);
+        emit Types.KeyGenAbort(oprfKeyId);
     }
     ////////////////////////////////////////////////////////////
     //                    Upgrade Authorization               //

@@ -84,7 +84,8 @@ library Types {
     event ReshareRound3(uint160 indexed oprfKeyId, uint256[] lagrange, uint128 indexed epoch);
     // event to delete created key
     event KeyDeletion(uint160 indexed oprfKeyId);
-    event KeyReshareAborted(uint160 indexed oprfKeyId);
+    // abort currently running key-gen
+    event KeyGenAbort(uint160 indexed oprfKeyId);
     // admin events
     event KeyGenAdminRevoked(address indexed admin);
     event KeyGenAdminRegistered(address indexed admin);

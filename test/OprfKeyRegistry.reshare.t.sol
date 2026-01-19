@@ -269,7 +269,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function abortReshare(uint160 oprfKeyId) internal {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyReshareAborted(oprfKeyId);
+        emit Types.KeyGenAbort(oprfKeyId);
         oprfKeyRegistry.abortReshare(oprfKeyId);
         vm.stopPrank();
     }
