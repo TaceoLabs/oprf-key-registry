@@ -165,7 +165,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         vm.stopPrank();
     }
 
-    function keyGenRound2Contributions(uint160 oprfKeyId) private {
+    function keyGenRound2Contributions(uint160 oprfKeyId) internal {
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
         emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
