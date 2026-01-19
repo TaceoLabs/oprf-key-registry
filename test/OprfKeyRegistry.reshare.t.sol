@@ -234,30 +234,6 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         abortReshare(oprfKeyId);
     }
 
-    function testAbortKeygenDuringReshare() public {
-        uint160 oprfKeyId = 42;
-        uint128 generatedEpoch = 1;
-        testKeyGen();
-        initReshare(oprfKeyId, generatedEpoch);
-        reshare1Round1Contributions(oprfKeyId, generatedEpoch);
-
-        vm.prank(taceoAdmin);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.BadContribution.selector));
-        oprfKeyRegistry.abortKeygen(oprfKeyId);
-        vm.stopPrank();
-    }
-
-    function testAbortReshareDuringKeyGen() public {
-        uint160 oprfKeyId = 42;
-        initKeyGen(oprfKeyId);
-        keyGenRound1Contributions(oprfKeyId);
-
-        vm.prank(taceoAdmin);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
-        oprfKeyRegistry.abortReshare(oprfKeyId);
-        vm.stopPrank();
-    }
-
     function initReshare(uint160 oprfKeyId, uint128 generatedEpoch) private {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
@@ -270,7 +246,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
         emit Types.KeyGenAbort(oprfKeyId);
-        oprfKeyRegistry.abortReshare(oprfKeyId);
+        oprfKeyRegistry.abortKeyGen(oprfKeyId);
         vm.stopPrank();
     }
 

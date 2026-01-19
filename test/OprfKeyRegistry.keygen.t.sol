@@ -59,7 +59,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         uint160 oprfKeyId = 42;
         initKeyGen(oprfKeyId);
         // abort before round 1
-        abortKeygen(oprfKeyId);
+        abortKeyGen(oprfKeyId);
         // can still do keygen
         testKeyGen();
     }
@@ -79,7 +79,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.aliceKeyGenRound1Contribution());
         vm.stopPrank();
 
-        abortKeygen(oprfKeyId);
+        abortKeyGen(oprfKeyId);
         testKeyGen();
     }
 
@@ -87,7 +87,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         uint160 oprfKeyId = 42;
         initKeyGen(oprfKeyId);
         keyGenRound1Contributions(oprfKeyId);
-        abortKeygen(oprfKeyId);
+        abortKeyGen(oprfKeyId);
         testKeyGen();
     }
 
@@ -100,7 +100,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
         vm.stopPrank();
-        abortKeygen(oprfKeyId);
+        abortKeyGen(oprfKeyId);
         testKeyGen();
     }
 
@@ -109,7 +109,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         initKeyGen(oprfKeyId);
         keyGenRound1Contributions(oprfKeyId);
         keyGenRound2Contributions(oprfKeyId);
-        abortKeygen(oprfKeyId);
+        abortKeyGen(oprfKeyId);
         testKeyGen();
     }
 
@@ -123,14 +123,14 @@ contract OprfKeyRegistryKeyGenTest is Test {
         emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, 0);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
-        abortKeygen(oprfKeyId);
+        abortKeyGen(oprfKeyId);
         testKeyGen();
     }
 
     function testAbortAfterKeyGen() public {
         uint160 oprfKeyId = 42;
         testKeyGen();
-        abortKeygen(oprfKeyId);
+        abortKeyGen(oprfKeyId);
     }
 
     function testKeyGen() public {
@@ -223,11 +223,11 @@ contract OprfKeyRegistryKeyGenTest is Test {
         assertEq(oprfKeyAndEpoch.epoch, generatedEpoch);
     }
 
-    function abortKeygen(uint160 oprfKeyId) internal {
+    function abortKeyGen(uint160 oprfKeyId) internal {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
         emit Types.KeyGenAbort(oprfKeyId);
-        oprfKeyRegistry.abortKeygen(oprfKeyId);
+        oprfKeyRegistry.abortKeyGen(oprfKeyId);
         vm.stopPrank();
     }
 }

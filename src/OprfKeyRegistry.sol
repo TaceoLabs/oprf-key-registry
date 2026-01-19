@@ -302,33 +302,16 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
-    /// @notice Aborts an in-progress OPRF key-gen process. A caller should call initKeyGen again if the generation should be redone.
+    /// @notice Aborts an in-progress OPRF key-gen/reshare process. A caller should call initKeyGen/initReshare afterwards if the generation should be redone.
     //
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    function abortKeygen(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
-        // Get the key-gen state for this key and check that generated epoch is 0
+    function abortKeyGen(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
+        // Get the key-gen state for this key and check that it actually exists
         Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         if (!st.exists) {
             revert UnknownId(oprfKeyId);
         }
-        if (st.generatedEpoch != 0) {
-            revert BadContribution();
-        }
-        st.exists = false;
-        _abortKeyGenState(st, oprfKeyId, 0);
-    }
-
-    /// @notice Aborts an in-progress OPRF re-share process. Does not delete the existing OPRF public-key, but only the running key-gen state.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    function abortReshare(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
-        Types.RegisteredOprfPublicKey memory oprfPublicKey = oprfKeyRegistry[oprfKeyId];
-        if (_isEmpty(oprfPublicKey.key)) revert UnknownId(oprfKeyId);
-        // Get the key-gen state for this key and reset everything
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        if (!st.exists) {
-            revert UnknownId(oprfKeyId);
-        }
-        _abortKeyGenState(st, oprfKeyId, oprfPublicKey.epoch);
+        _abortKeyGenState(st, oprfKeyId);
     }
 
     // ==================================
@@ -906,8 +889,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     //
     /// @param st The key-gen state.
     /// @param oprfKeyId The id of the key-gen state.
-    /// @param oldEpoch The old epoch.
-    function _abortKeyGenState(Types.OprfKeyGenState storage st, uint160 oprfKeyId, uint128 oldEpoch) internal virtual {
+    function _abortKeyGenState(Types.OprfKeyGenState storage st, uint160 oprfKeyId) internal virtual {
         // we need to leave the previous share commitments to check the peers are using the correct input
         delete st.shareCommitments;
         delete st.lagrangeCoeffs;
@@ -927,7 +909,13 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
         st.round2Done = new bool[](numPeers);
         st.round3Done = new bool[](numPeers);
-        st.generatedEpoch = oldEpoch;
+        if (st.generatedEpoch == 0) {
+            // this is a key-gen, set exists to false
+            st.exists = false;
+        } else {
+            // this is a reshare, reduce generated epoch by one but leave exists at true
+            st.generatedEpoch = st.generatedEpoch - 1;
+        }
 
         emit Types.KeyGenAbort(oprfKeyId);
     }
