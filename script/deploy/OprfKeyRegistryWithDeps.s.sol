@@ -10,8 +10,6 @@ import {Types} from "../../src/Types.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DeployOprfKeyRegistryWithDepsScript is Script {
-    using Types for Types.BabyJubJubElement;
-
     OprfKeyRegistry public oprfKeyRegistry;
     ERC1967Proxy public proxy;
 
@@ -31,12 +29,6 @@ contract DeployOprfKeyRegistryWithDepsScript is Script {
         }
     }
 
-    function deployAccumulator() public returns (address) {
-        BabyJubJub acc = new BabyJubJub();
-        console.log("Accumulator deployed to:", address(acc));
-        return address(acc);
-    }
-
     function run() public {
         vm.startBroadcast();
 
@@ -44,18 +36,12 @@ contract DeployOprfKeyRegistryWithDepsScript is Script {
         uint256 threshold = vm.envUint("THRESHOLD");
         uint256 numPeers = vm.envUint("NUM_PEERS");
 
-        address accumulatorAddress = deployAccumulator();
         address keyGenVerifierAddress = deployGroth16VerifierKeyGen(threshold, numPeers);
         // Deploy implementation
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector,
-            taceoAdminAddress,
-            keyGenVerifierAddress,
-            accumulatorAddress,
-            threshold,
-            numPeers
+            OprfKeyRegistry.initialize.selector, taceoAdminAddress, keyGenVerifierAddress, threshold, numPeers
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);

@@ -6,8 +6,6 @@ import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 import {Types} from "../src/Types.sol";
 
 contract RegisterParticipantScript is Script {
-    using Types for Types.BabyJubJubElement;
-
     OprfKeyRegistry public oprfKeyRegistry;
 
     function setUp() public {

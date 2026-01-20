@@ -7,7 +7,6 @@ import {Types} from "../../src/Types.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DeployOprfKeyRegistryScript is Script {
-    using Types for Types.BabyJubJubElement;
     OprfKeyRegistry public oprfKeyRegistry;
     ERC1967Proxy public proxy;
 
@@ -17,13 +16,11 @@ contract DeployOprfKeyRegistryScript is Script {
         vm.startBroadcast();
 
         address taceoAdminAddress = vm.envAddress("TACEO_ADMIN_ADDRESS");
-        address accumulatorAddress = vm.envAddress("ACCUMULATOR_ADDRESS");
         address keyGenVerifierAddress = vm.envAddress("KEY_GEN_VERIFIER_ADDRESS");
         uint256 threshold = vm.envUint("THRESHOLD");
         uint256 numPeers = vm.envUint("NUM_PEERS");
 
         console.log("using TACEO address:", taceoAdminAddress);
-        console.log("using accumulator address:", accumulatorAddress);
         console.log("using key-gen verifier address:", keyGenVerifierAddress);
         console.log("using threshold:", threshold);
         console.log("using numPeers:", numPeers);
@@ -32,12 +29,7 @@ contract DeployOprfKeyRegistryScript is Script {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector,
-            taceoAdminAddress,
-            keyGenVerifierAddress,
-            accumulatorAddress,
-            threshold,
-            numPeers
+            OprfKeyRegistry.initialize.selector, taceoAdminAddress, keyGenVerifierAddress, threshold, numPeers
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);
