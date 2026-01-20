@@ -462,10 +462,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // set the contribution to done
         st.round2Done[partyId] = true;
 
-        // depending on key-gen or reshare a different amount of producers
-        uint256 necessaryContributions = st.generatedEpoch == 0 ? numPeers : threshold;
-        _tryEmitRound3Event(oprfKeyId, necessaryContributions, st);
-
         // last step verify the proof and potentially revert if proof fails
 
         // build the public input:
@@ -528,6 +524,10 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         } else {
             revert UnsupportedNumPeersThreshold();
         }
+        // depending on key-gen or reshare a different amount of producers
+        uint256 necessaryContributions = st.generatedEpoch == 0 ? numPeers : threshold;
+        _tryEmitRound3Event(oprfKeyId, necessaryContributions, st);
+
         // Emit the transaction confirmation
         emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 2, st.generatedEpoch);
     }
@@ -604,7 +604,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check if we are in correct round
-        if (st.currentRound != OprfKeyGen.Round.TWO) revert UnknownId(oprfKeyId);
+        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
         // check if we are a producer
         if (OprfKeyGen.KeyGenRole.PRODUCER != st.nodeRoles[msg.sender]) {
             // we are not a producer -> return empty array
@@ -631,7 +631,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check if there exists this key-gen
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check if we are in correct round
-        if (st.currentRound != OprfKeyGen.Round.TWO) revert UnknownId(oprfKeyId);
+        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
         // load the producer's keys for decryption
         return _loadProducerPeerPublicKeys(st);
     }
@@ -757,7 +757,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         view
         returns (BabyJubJub.Affine[] memory)
     {
-        if (st.currentRound != OprfKeyGen.Round.TWO && st.currentRound != OprfKeyGen.Round.THREE) {
+        if (st.currentRound != OprfKeyGen.Round.TWO) {
             revert WrongRound(st.currentRound);
         }
         BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](numPeers);
