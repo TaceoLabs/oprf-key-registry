@@ -350,7 +350,7 @@ library BabyJubJub {
     ///
     /// @param lhs The left hand side.
     /// @param rhs The right hand side.
-    /// @return True iff the x and y coordinates are 0.
+    /// @return True iff both points have equal x and y coordinates.
     function isEqual(Affine calldata lhs, Affine calldata rhs) external pure returns (bool) {
         return lhs.x == rhs.x && lhs.y == rhs.y;
     }
