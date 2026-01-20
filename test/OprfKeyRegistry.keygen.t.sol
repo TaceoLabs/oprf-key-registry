@@ -130,7 +130,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 1));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
 
@@ -148,7 +148,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 1));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
 
@@ -166,7 +166,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         keyGenRound1Contributions(oprfKeyId);
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 2));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
         // finish key-gen
@@ -184,7 +184,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 3));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
         // finish key-gen

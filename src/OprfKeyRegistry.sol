@@ -118,7 +118,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     error UnexpectedAmountPeers(uint256 expectedParties);
     error UnknownId(uint160 id);
     error UnsupportedNumPeersThreshold();
-    error WrongRound();
+    error WrongRound(OprfKeyGen.Round);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -284,7 +284,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         OprfKeyGen.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         if (st.currentRound != OprfKeyGen.Round.NOT_STARTED) {
-            revert WrongRound();
+            revert WrongRound(st.currentRound);
         }
         if (!oprfPublicKey.key.isEmpty()) {
             // delete the created key
@@ -428,7 +428,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check that we started the key-gen for this OPRF public-key.
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that we are actually in round2
-        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound();
+        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
 
         // return the partyId if sender is really a participant
         uint16 partyId = _internParticipantCheck();
@@ -540,7 +540,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check that we started the key-gen for this OPRF public-key.
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that we are actually in round3
-        if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound();
+        if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
         // return the partyId if sender is really a participant
         uint16 partyId = _internParticipantCheck();
         // check that this peer did not submit anything for this round
@@ -653,7 +653,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check if there exists this a key-gen
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that round2 ciphers are finished
-        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound();
+        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
         if (st.generatedEpoch == 0) {
             // this is a key-gen so just send all ciphers
             return st.round2[peer.partyId];
@@ -745,7 +745,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check that we started the key-gen for this OPRF public-key
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that we are in correct round
-        if (st.currentRound != OprfKeyGen.Round.ONE) revert WrongRound();
+        if (st.currentRound != OprfKeyGen.Round.ONE) revert WrongRound(st.currentRound);
         // check that we don't have double submission
         if (!st.round1[partyId].commShare.isEmpty()) revert AlreadySubmitted();
         st.round1[partyId] = data;
@@ -758,7 +758,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         returns (BabyJubJub.Affine[] memory)
     {
         if (st.currentRound != OprfKeyGen.Round.TWO && st.currentRound != OprfKeyGen.Round.THREE) {
-            revert WrongRound();
+            revert WrongRound(st.currentRound);
         }
         BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](numPeers);
         for (uint256 i = 0; i < numPeers; ++i) {
@@ -772,7 +772,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         view
         returns (BabyJubJub.Affine[] memory)
     {
-        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound();
+        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
         BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](st.numProducers);
         uint256 counter = 0;
         for (uint256 i = 0; i < numPeers; ++i) {

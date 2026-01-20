@@ -116,7 +116,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // cannot submit round 1
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 0));
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.carolReshare1Round1Contribution());
         vm.stopPrank();
 
@@ -138,7 +138,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // cannot submit round 1
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 0));
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.carolReshare1Round1Contribution());
         vm.stopPrank();
 
@@ -161,7 +161,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // cannot continue
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 0));
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
     }
@@ -176,7 +176,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // we never create a key therefore we get unknown ID
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 0));
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.carolReshare2Round2Contribution());
         vm.stopPrank();
         testReshare2();
@@ -192,7 +192,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // we never create a key therefore we get unknown ID
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 0));
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
         testReshare2();
@@ -209,7 +209,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // we never create a key therefore we get unknown ID
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 1));
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.carolReshare2Round2Contribution());
         vm.stopPrank();
     }
@@ -225,7 +225,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // we never create a key therefore we get unknown ID
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 1));
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
     }
