@@ -333,7 +333,6 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         reshare1();
     }
 
-
     function testAbortReshareBeforeRound3() public {
         // make a normal key-gen for id 42;
         testKeyGen();
