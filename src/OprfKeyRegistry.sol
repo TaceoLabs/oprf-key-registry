@@ -92,6 +92,16 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
+    modifier adminOrOwner() {
+        _adminOrOwner();
+        _;
+    }
+
+    function _adminOrOwner() internal view {
+        bool isAdmin = keygenAdmins[msg.sender];
+        bool isOwner = owner() == msg.sender;
+        if (!isAdmin && !isOwner) revert OnlyAdmin();
+    }
     // =============================================
     //                Errors
     // =============================================
@@ -166,7 +176,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     /// Currently, any existing admin may add another admin.
     ///
     /// @param _keygenAdmin The admin address to register
-    function addKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized onlyAdmin {
+    function addKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized adminOrOwner {
         // if the _keygenAdmin is not yet an admin, we add them
         if (!keygenAdmins[_keygenAdmin]) {
             keygenAdmins[_keygenAdmin] = true;
