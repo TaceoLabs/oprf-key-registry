@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {console} from "forge-std/console.sol";
 import {Types} from "./Types.sol";
 import {BabyJubJub} from "./BabyJubJub.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";

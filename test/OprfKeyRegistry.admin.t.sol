@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import {BabyJubJub} from "../src/BabyJubJub.sol";
-import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";

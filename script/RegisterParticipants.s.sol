@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
-import {Types} from "../src/Types.sol";
 
 contract RegisterParticipantScript is Script {
     OprfKeyRegistry public oprfKeyRegistry;

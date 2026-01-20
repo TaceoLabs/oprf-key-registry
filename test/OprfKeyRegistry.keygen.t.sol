@@ -5,7 +5,6 @@ import {BabyJubJub} from "../src/BabyJubJub.sol";
 import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
 import {Types} from "../src/Types.sol";
 import {Verifier as VerifierKeyGen13} from "../src/VerifierKeyGen13.sol";
