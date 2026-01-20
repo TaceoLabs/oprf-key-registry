@@ -127,7 +127,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     {
         __Ownable_init(msg.sender);
         __Ownable2Step_init();
-        require(_numPeers < 1 << 16, "only supports party size up to 2^16");
         keygenAdmins[_keygenAdmin] = true;
         amountKeygenAdmins += 1;
         keyGenVerifier = _keyGenVerifierAddress;
