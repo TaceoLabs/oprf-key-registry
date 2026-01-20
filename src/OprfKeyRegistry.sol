@@ -631,7 +631,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check if there exists this key-gen
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check if we are in correct round
-        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
+        if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
         // load the producer's keys for decryption
         return _loadProducerPeerPublicKeys(st);
     }
@@ -653,7 +653,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check if there exists this a key-gen
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that round2 ciphers are finished
-        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
+        if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
         if (st.generatedEpoch == 0) {
             // this is a key-gen so just send all ciphers
             return st.round2[peer.partyId];
@@ -757,9 +757,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         view
         returns (BabyJubJub.Affine[] memory)
     {
-        if (st.currentRound != OprfKeyGen.Round.TWO) {
-            revert WrongRound(st.currentRound);
-        }
         BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](numPeers);
         for (uint256 i = 0; i < numPeers; ++i) {
             pubKeyList[i] = st.round1[i].ephPubKey;
@@ -772,7 +769,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         view
         returns (BabyJubJub.Affine[] memory)
     {
-        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
         BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](st.numProducers);
         uint256 counter = 0;
         for (uint256 i = 0; i < numPeers; ++i) {
