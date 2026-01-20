@@ -297,7 +297,7 @@ library BabyJubJub {
     /// @param lhs The point on the left hand side.
     /// @param rhs The point on the right hand side.
     /// @return res The resulting point
-    function add(Affine calldata lhs, Affine calldata rhs) external pure returns (Affine memory res) {
+    function add(Affine calldata lhs, Affine calldata rhs) public pure returns (Affine memory res) {
         // Handle identity cases
         if (isIdentity(lhs)) {
             res = rhs;
@@ -342,7 +342,7 @@ library BabyJubJub {
     ///
     /// @param p The point.
     /// @return True iff the x and y coordinates are 0.
-    function isEmpty(Affine calldata p) external pure returns (bool) {
+    function isEmpty(Affine calldata p) public pure returns (bool) {
         return p.x == 0 && p.y == 0;
     }
 
@@ -351,7 +351,7 @@ library BabyJubJub {
     /// @param lhs The left hand side.
     /// @param rhs The right hand side.
     /// @return True iff both points have equal x and y coordinates.
-    function isEqual(Affine calldata lhs, Affine calldata rhs) external pure returns (bool) {
+    function isEqual(Affine calldata lhs, Affine calldata rhs) public pure returns (bool) {
         return lhs.x == rhs.x && lhs.y == rhs.y;
     }
 
@@ -359,7 +359,7 @@ library BabyJubJub {
     ///
     /// @param p The affine point.
     /// @return True if the point is on the BabyJubJub curve, false otherwise.
-    function isOnCurve(Affine calldata p) external pure returns (bool) {
+    function isOnCurve(Affine calldata p) public pure returns (bool) {
         if (isIdentity(p)) return true;
         if (p.x >= Q || p.y >= Q) return false;
 
@@ -375,7 +375,7 @@ library BabyJubJub {
     ///
     /// @param p The affine point.
     /// @return True if the point is in the correct sub-subgroup, false otherwise.
-    function isInCorrectSubgroupAssumingOnCurve(Affine calldata p) external pure returns (bool) {
+    function isInCorrectSubgroupAssumingOnCurve(Affine calldata p) public pure returns (bool) {
         (uint256 x1, uint256 y1, uint256 z1) = _scalarMulInner(characteristic_bits(), 0, p.x, p.y);
         return x1 == 0 && y1 == z1 && p.y != 0;
     }
@@ -390,8 +390,8 @@ library BabyJubJub {
     /// @param ids The party IDs (coefficients of the polynomial) of the participating parties (starting with ID 0)
     /// @param threshold The degree of the polynomial + 1
     /// @return lagrange The requested lagrange coefficients
-    function computeLagrangeCoefficiants(uint256[] memory ids, uint256 threshold, uint256 numPeers)
-        external
+    function computeLagrangeCoefficiants(uint256[] calldata ids, uint256 threshold, uint256 numPeers)
+        public
         pure
         returns (uint256[] memory lagrange)
     {
@@ -428,7 +428,7 @@ library BabyJubJub {
     /// @param scalar The scalar for the multiplication.
     /// @param p The affine point.
     /// @return The resulting affine point.
-    function scalarMul(uint256 scalar, Affine calldata p) external pure returns (Affine memory) {
+    function scalarMul(uint256 scalar, Affine calldata p) public pure returns (Affine memory) {
         require(scalar < R);
         if (scalar == 0) {
             return identity();
