@@ -333,6 +333,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         reshare1();
     }
 
+
     function testAbortReshareBeforeRound3() public {
         // make a normal key-gen for id 42;
         testKeyGen();
@@ -369,6 +370,50 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
         abortKeyGen(oprfKeyId);
         reshare1();
+    }
+
+    function testReshareIsStuck() public {
+        testKeyGen();
+        uint128 generatedEpoch = 1;
+        uint160 oprfKeyId = 42;
+        initReshare(oprfKeyId, generatedEpoch);
+
+        OprfKeyGen.Round1Contribution memory aliceContribution = Contributions.aliceReshare1Round1Contribution();
+        aliceContribution.commShare = BabyJubJub.Affine({x: 0, y: 0});
+        aliceContribution.commCoeffs = 0;
+
+        vm.prank(alice);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
+        oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, aliceContribution);
+        vm.stopPrank();
+
+        vm.prank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
+        oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.bobReshare1Round1Contribution());
+        vm.stopPrank();
+
+        vm.prank(carol);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.NotEnoughProducers(oprfKeyId);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 1, generatedEpoch);
+        oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.carolReshare1Round1Contribution());
+        vm.stopPrank();
+
+        // check that we can't continue with round 2
+        vm.prank(carol);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 4));
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.carolReshare2Round2Contribution());
+        vm.stopPrank();
+
+        // now abort
+        abortKeyGen(oprfKeyId);
+
+        // and finish
+        reshare1();
+        reshare2();
     }
 
     function initReshare(uint160 oprfKeyId, uint128 generatedEpoch) private {

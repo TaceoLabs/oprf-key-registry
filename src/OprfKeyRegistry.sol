@@ -791,13 +791,14 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (st.currentRound != OprfKeyGen.Round.ONE) return;
         if (!allRound1Submitted(st)) return;
         if (st.numProducers < necessaryContributions) {
+            // everyone contributed but we are don't have enough producers. This is an alert and we need to abort!
             emit OprfKeyGen.NotEnoughProducers(oprfKeyId);
             st.currentRound = OprfKeyGen.Round.STUCK;
+        } else {
+            st.currentRound = OprfKeyGen.Round.TWO;
+            st.shareCommitments = new BabyJubJub.Affine[](numPeers);
+            emit OprfKeyGen.SecretGenRound2(oprfKeyId, st.generatedEpoch);
         }
-
-        st.currentRound = OprfKeyGen.Round.TWO;
-        st.shareCommitments = new BabyJubJub.Affine[](numPeers);
-        emit OprfKeyGen.SecretGenRound2(oprfKeyId, st.generatedEpoch);
     }
 
     function _tryEmitRound3Event(
