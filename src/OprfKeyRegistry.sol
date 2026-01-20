@@ -32,7 +32,6 @@ interface IOprfKeyRegistry {
 
 contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
     using BabyJubJub for BabyJubJub.Affine;
-    using OprfKeyGen for OprfKeyGen.Groth16Proof;
     using OprfKeyGen for OprfKeyGen.OprfKeyGenState;
     using OprfKeyGen for OprfKeyGen.OprfPeer;
     using OprfKeyGen for OprfKeyGen.Round1Contribution;
