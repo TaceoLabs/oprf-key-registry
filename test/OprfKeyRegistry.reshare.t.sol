@@ -3,10 +3,10 @@ pragma solidity ^0.8.20;
 
 import {BabyJubJub} from "../src/BabyJubJub.sol";
 import {Contributions} from "./Contributions.t.sol";
+import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
-import {Test} from "forge-std/Test.sol";
-import {Types} from "../src/Types.sol";
 import {OprfKeyRegistryKeyGenTest} from "./OprfKeyRegistry.keygen.t.sol";
+import {Test} from "forge-std/Test.sol";
 
 contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     using BabyJubJub for BabyJubJub.Affine;
@@ -108,7 +108,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         vm.prank(taceoAdmin);
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
-        emit Types.KeyGenAbort(oprfKeyId);
+        emit OprfKeyGen.KeyGenAbort(oprfKeyId);
         oprfKeyRegistry.abortKeyGen(oprfKeyId);
         vm.stopPrank();
 
@@ -130,7 +130,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         vm.prank(taceoAdmin);
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
-        emit Types.KeyGenAbort(oprfKeyId);
+        emit OprfKeyGen.KeyGenAbort(oprfKeyId);
         oprfKeyRegistry.abortKeyGen(oprfKeyId);
         vm.stopPrank();
 
@@ -240,13 +240,13 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.bobReshare1Round1Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.aliceReshare1Round1Contribution());
         vm.stopPrank();
 
@@ -256,7 +256,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         // second abort is an error
         vm.prank(taceoAdmin);
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
-        emit Types.KeyGenAbort(oprfKeyId);
+        emit OprfKeyGen.KeyGenAbort(oprfKeyId);
         oprfKeyRegistry.abortKeyGen(oprfKeyId);
         vm.stopPrank();
 
@@ -288,13 +288,13 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.bobReshare1Round1Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.aliceReshare1Round1Contribution());
         vm.stopPrank();
 
@@ -326,7 +326,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 2, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 2, generatedEpoch);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.aliceReshare1Round2Contribution());
         vm.stopPrank();
         abortKeyGen(oprfKeyId);
@@ -358,13 +358,13 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 3, generatedEpoch);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 3, generatedEpoch);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
         abortKeyGen(oprfKeyId);
@@ -374,7 +374,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function initReshare(uint160 oprfKeyId, uint128 generatedEpoch) private {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
-        emit Types.ReshareRound1(oprfKeyId, THRESHOLD, generatedEpoch);
+        emit OprfKeyGen.ReshareRound1(oprfKeyId, THRESHOLD, generatedEpoch);
         oprfKeyRegistry.initReshare(oprfKeyId);
         vm.stopPrank();
     }
@@ -383,21 +383,21 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         // carol is a consumer here
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.bobReshare1Round1Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.aliceReshare1Round1Contribution());
         vm.stopPrank();
 
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.SecretGenRound2(oprfKeyId, generatedEpoch);
+        emit OprfKeyGen.SecretGenRound2(oprfKeyId, generatedEpoch);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.carolReshare1Round1Contribution());
         vm.stopPrank();
     }
@@ -406,7 +406,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         // do round 2 contributions
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 2, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 2, generatedEpoch);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.aliceReshare1Round2Contribution());
         vm.stopPrank();
 
@@ -416,9 +416,9 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         lagrange_should[1] = Contributions.LAGRANGE_RESHARE1_1;
         lagrange_should[2] = 0;
         vm.expectEmit(true, true, true, true);
-        emit Types.ReshareRound3(oprfKeyId, lagrange_should, generatedEpoch);
+        emit OprfKeyGen.ReshareRound3(oprfKeyId, lagrange_should, generatedEpoch);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 2, generatedEpoch);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobReshare1Round2Contribution());
         vm.stopPrank();
     }
@@ -427,28 +427,29 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         // do round 3 contributions
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 3, generatedEpoch);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 3, generatedEpoch);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         // check that we are still in epoch 0
-        Types.RegisteredOprfPublicKey memory oprfKeyAndEpochKeyGen = oprfKeyRegistry.getOprfPublicKeyAndEpoch(oprfKeyId);
+        OprfKeyGen.RegisteredOprfPublicKey memory oprfKeyAndEpochKeyGen =
+            oprfKeyRegistry.getOprfPublicKeyAndEpoch(oprfKeyId);
         assertEq(oprfKeyAndEpochKeyGen.key.x, Contributions.SHOULD_OPRF_PUBLIC_KEY_X);
         assertEq(oprfKeyAndEpochKeyGen.key.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
         assertEq(oprfKeyAndEpochKeyGen.epoch, 0);
 
         // last contribution
         vm.expectEmit(true, true, true, true);
-        emit Types.SecretGenFinalize(oprfKeyId, generatedEpoch);
+        emit OprfKeyGen.SecretGenFinalize(oprfKeyId, generatedEpoch);
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 3, generatedEpoch);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
     }
@@ -457,21 +458,21 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         // alice is a consumer here
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.bobReshare2Round1Contribution());
         vm.stopPrank();
 
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.carolReshare2Round1Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.SecretGenRound2(oprfKeyId, generatedEpoch);
+        emit OprfKeyGen.SecretGenRound2(oprfKeyId, generatedEpoch);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, generatedEpoch);
         oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.aliceReshare2Round1Contribution());
         vm.stopPrank();
     }
@@ -479,7 +480,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function reshare2Round2Contributions(uint160 oprfKeyId, uint128 generatedEpoch) private {
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 2, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 2, generatedEpoch);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.carolReshare2Round2Contribution());
         vm.stopPrank();
 
@@ -489,9 +490,9 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         lagrange_should[1] = Contributions.LAGRANGE_RESHARE2_0;
         lagrange_should[2] = Contributions.LAGRANGE_RESHARE2_1;
         vm.expectEmit(true, true, true, true);
-        emit Types.ReshareRound3(oprfKeyId, lagrange_should, generatedEpoch);
+        emit OprfKeyGen.ReshareRound3(oprfKeyId, lagrange_should, generatedEpoch);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 2, generatedEpoch);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobReshare2Round2Contribution());
         vm.stopPrank();
     }
@@ -499,28 +500,29 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function reshare2Round3Contributions(uint160 oprfKeyId, uint128 generatedEpoch) private {
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 3, generatedEpoch);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 3, generatedEpoch);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         // check that we are still in epoch 0
-        Types.RegisteredOprfPublicKey memory oprfKeyAndEpochKeyGen = oprfKeyRegistry.getOprfPublicKeyAndEpoch(oprfKeyId);
+        OprfKeyGen.RegisteredOprfPublicKey memory oprfKeyAndEpochKeyGen =
+            oprfKeyRegistry.getOprfPublicKeyAndEpoch(oprfKeyId);
         assertEq(oprfKeyAndEpochKeyGen.key.x, Contributions.SHOULD_OPRF_PUBLIC_KEY_X);
         assertEq(oprfKeyAndEpochKeyGen.key.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
         assertEq(oprfKeyAndEpochKeyGen.epoch, generatedEpoch - 1);
 
         // last contribution
         vm.expectEmit(true, true, true, true);
-        emit Types.SecretGenFinalize(oprfKeyId, generatedEpoch);
+        emit OprfKeyGen.SecretGenFinalize(oprfKeyId, generatedEpoch);
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 3, generatedEpoch);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
     }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Types} from "../src/Types.sol";
 import {BabyJubJub} from "../src/BabyJubJub.sol";
+import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 
 library Contributions {
     uint256 public constant SHOULD_OPRF_PUBLIC_KEY_X =
@@ -18,8 +18,8 @@ library Contributions {
     uint256 public constant LAGRANGE_RESHARE2_1 =
         2736030358979909402780800718157159386076813972158567259200215660948447373039;
 
-    function aliceKeyGenRound1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function aliceKeyGenRound1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({
                 x: 9731396402574735292520607435652929479013799369660600452718124765962384122206,
                 y: 1791183065767254290031487023641029869749363832550048702108440921874888860067
@@ -32,8 +32,8 @@ library Contributions {
         });
     }
 
-    function bobKeyGenRound1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function bobKeyGenRound1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({
                 x: 1688152706970503579483116674764161908712002477111907598715160302455660303671,
                 y: 20413269805955861205216587925478893435677791255572561712193586073128762510903
@@ -46,8 +46,8 @@ library Contributions {
         });
     }
 
-    function carolKeyGenRound1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function carolKeyGenRound1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({
                 x: 181606117961119882406004099351368673462695832980672617028988734026223981902,
                 y: 16711318399047418081809052707903382106816693867662676821566699591386252462603
@@ -60,8 +60,8 @@ library Contributions {
         });
     }
 
-    function aliceKeyGenRound2Contribution() internal pure returns (Types.Round2Contribution memory) {
-        Types.SecretGenCiphertext[] memory ciphers = new Types.SecretGenCiphertext[](3);
+    function aliceKeyGenRound2Contribution() internal pure returns (OprfKeyGen.Round2Contribution memory) {
+        OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](3);
         ciphers[0].cipher = 19832253897649054271583161487919613448418129890226907506566329446364699806012;
         ciphers[0].nonce = 20831482850960414231183839105821258227003798184995960515894249198692735666323;
         ciphers[0].commitment = BabyJubJub.Affine({
@@ -83,7 +83,7 @@ library Contributions {
             y: 7910519810599925421969300274277074072370335395203109552793024777356644374799
         });
 
-        return Types.Round2Contribution({
+        return OprfKeyGen.Round2Contribution({
             compressedProof: [
                 7489273648609502992983484140998083615357692735581216280538892353105930259040,
                 19989437463538379781198550556176091384238467414813133415903411168177793686171,
@@ -94,8 +94,8 @@ library Contributions {
         });
     }
 
-    function bobKeyGenRound2Contribution() internal pure returns (Types.Round2Contribution memory) {
-        Types.SecretGenCiphertext[] memory ciphers = new Types.SecretGenCiphertext[](3);
+    function bobKeyGenRound2Contribution() internal pure returns (OprfKeyGen.Round2Contribution memory) {
+        OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](3);
         ciphers[0].cipher = 18249384055506802041537124767751613342781214525932159399360031773007369623669;
         ciphers[0].nonce = 6394203220878853146824375105870234150928064079939148335565206383036391193698;
         ciphers[0].commitment = BabyJubJub.Affine({
@@ -117,7 +117,7 @@ library Contributions {
             y: 4429285008952165989321392573059998840101366699515723312607938939382895376563
         });
 
-        return Types.Round2Contribution({
+        return OprfKeyGen.Round2Contribution({
             compressedProof: [
                 37110928150208282832357970659795761746468531810156791258398565288740928207745,
                 12341293030608599642694259226976466687712122680341499000989003999397523166146,
@@ -128,8 +128,8 @@ library Contributions {
         });
     }
 
-    function carolKeyGenRound2Contribution() internal pure returns (Types.Round2Contribution memory) {
-        Types.SecretGenCiphertext[] memory ciphers = new Types.SecretGenCiphertext[](3);
+    function carolKeyGenRound2Contribution() internal pure returns (OprfKeyGen.Round2Contribution memory) {
+        OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](3);
         ciphers[0].cipher = 1957877434559298822431197687001099087163743200380549416753783113443494861049;
         ciphers[0].nonce = 11563240921388312598140474743536214562840620425550760487143605407144119028822;
         ciphers[0].commitment = BabyJubJub.Affine({
@@ -151,7 +151,7 @@ library Contributions {
             y: 20942165173003147834228711951197376959391222901305016500501111566993829324338
         });
 
-        return Types.Round2Contribution({
+        return OprfKeyGen.Round2Contribution({
             compressedProof: [
                 11524286503299032699812598979075934123390547754029109791477223759973860441304,
                 1972717075150534148169497022594623597438969348452718557873856399510334800267,
@@ -162,8 +162,8 @@ library Contributions {
         });
     }
 
-    function aliceReshare1Round1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function aliceReshare1Round1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({
                 x: 16062973116794081552712593805136955167636714564622881915511609596962351864823,
                 y: 6557380504997132377914921663934948972609177413029769204458212633090197846589
@@ -176,8 +176,8 @@ library Contributions {
         });
     }
 
-    function bobReshare1Round1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function bobReshare1Round1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({
                 x: 91176233636677954556161430483828463443608212229589478345618270997193150880,
                 y: 2559000961455833025613949648281423815794770568094314541441430835225000249695
@@ -190,8 +190,8 @@ library Contributions {
         });
     }
 
-    function carolReshare1Round1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function carolReshare1Round1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({x: 0, y: 0}),
             commCoeffs: 0,
             ephPubKey: BabyJubJub.Affine({
@@ -201,8 +201,8 @@ library Contributions {
         });
     }
 
-    function aliceReshare1Round2Contribution() internal pure returns (Types.Round2Contribution memory) {
-        Types.SecretGenCiphertext[] memory ciphers = new Types.SecretGenCiphertext[](3);
+    function aliceReshare1Round2Contribution() internal pure returns (OprfKeyGen.Round2Contribution memory) {
+        OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](3);
         ciphers[0].cipher = 197118226231109495478452990381235518764414053856124898397996429629727947636;
         ciphers[0].nonce = 5407597092397282724048949558614821167540243075109267536112961438456719199198;
         ciphers[0].commitment = BabyJubJub.Affine({
@@ -224,7 +224,7 @@ library Contributions {
             y: 8799663124595542098655179011735134947406036819787716536249378063315037891822
         });
 
-        return Types.Round2Contribution({
+        return OprfKeyGen.Round2Contribution({
             compressedProof: [
                 10030310196777558425968873099444119875562865006018210377002236891957043075646,
                 217268790479166039895399603567864901371900204400831025280028486328600474866,
@@ -235,8 +235,8 @@ library Contributions {
         });
     }
 
-    function bobReshare1Round2Contribution() internal pure returns (Types.Round2Contribution memory) {
-        Types.SecretGenCiphertext[] memory ciphers = new Types.SecretGenCiphertext[](3);
+    function bobReshare1Round2Contribution() internal pure returns (OprfKeyGen.Round2Contribution memory) {
+        OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](3);
         ciphers[0].cipher = 9407708232847761869067255315123502922618526742106679830299918011175881010762;
         ciphers[0].nonce = 8520772281149716841234555527563291790077333312018724191165268773825445386313;
         ciphers[0].commitment = BabyJubJub.Affine({
@@ -258,7 +258,7 @@ library Contributions {
             y: 10053094708537105921220495201632455602974820941840745641675361612110329734306
         });
 
-        return Types.Round2Contribution({
+        return OprfKeyGen.Round2Contribution({
             compressedProof: [
                 39568600564593259585691055526745423541218153312409713934520156912320555360167,
                 7158985856332895447846061197341888840319337513240609274440056182792360018662,
@@ -269,8 +269,8 @@ library Contributions {
         });
     }
 
-    function aliceReshare2Round1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function aliceReshare2Round1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({x: 0, y: 0}),
             commCoeffs: 0,
             ephPubKey: BabyJubJub.Affine({
@@ -280,8 +280,8 @@ library Contributions {
         });
     }
 
-    function bobReshare2Round1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function bobReshare2Round1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({
                 x: 5634149430531274028412898631829388172501915004209628780803130431026743077693,
                 y: 13112181497848450299416598095804710559058919108017442094854378661759245199051
@@ -294,8 +294,8 @@ library Contributions {
         });
     }
 
-    function carolReshare2Round1Contribution() internal pure returns (Types.Round1Contribution memory) {
-        return Types.Round1Contribution({
+    function carolReshare2Round1Contribution() internal pure returns (OprfKeyGen.Round1Contribution memory) {
+        return OprfKeyGen.Round1Contribution({
             commShare: BabyJubJub.Affine({
                 x: 6475835016907173774429379067371133698036163375381327213245538425087441835089,
                 y: 9841943748444410204166247325667369604063932122334491806171602956109037592242
@@ -308,8 +308,8 @@ library Contributions {
         });
     }
 
-    function bobReshare2Round2Contribution() internal pure returns (Types.Round2Contribution memory) {
-        Types.SecretGenCiphertext[] memory ciphers = new Types.SecretGenCiphertext[](3);
+    function bobReshare2Round2Contribution() internal pure returns (OprfKeyGen.Round2Contribution memory) {
+        OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](3);
         ciphers[0].cipher = 18816262879665877905949758478860723821530629732424032772127783216869764250509;
         ciphers[0].nonce = 3035994099000363148594624471527752695077648197263990958037871164075749137685;
         ciphers[0].commitment = BabyJubJub.Affine({
@@ -331,7 +331,7 @@ library Contributions {
             y: 4678238268222438811238433085024233070402948484113478284750459655060752047798
         });
 
-        return Types.Round2Contribution({
+        return OprfKeyGen.Round2Contribution({
             compressedProof: [
                 34634441233941053816066304439692405013114288935964132179073820483613007712511,
                 10013929576087127672045330460089950406469871716763257856165247173233756317620,
@@ -342,8 +342,8 @@ library Contributions {
         });
     }
 
-    function carolReshare2Round2Contribution() internal pure returns (Types.Round2Contribution memory) {
-        Types.SecretGenCiphertext[] memory ciphers = new Types.SecretGenCiphertext[](3);
+    function carolReshare2Round2Contribution() internal pure returns (OprfKeyGen.Round2Contribution memory) {
+        OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](3);
         ciphers[0].cipher = 5563410267912572074767299418992296979280946642779029692169142406594865002117;
         ciphers[0].nonce = 2146667492274117512461943186184662459483433236128534376097435491207137149011;
         ciphers[0].commitment = BabyJubJub.Affine({
@@ -365,7 +365,7 @@ library Contributions {
             y: 20012745051335990951436913928870900806054081199178035565043623297465988695809
         });
 
-        return Types.Round2Contribution({
+        return OprfKeyGen.Round2Contribution({
             compressedProof: [
                 35310165663954027527959899016589579678687579509243645825934419324236038498087,
                 4713409969044173197709349510522147209396287945309122029968240660225342159114,

@@ -5,7 +5,7 @@ import {BabyJubJub} from "./BabyJubJub.sol";
 
 /// @title Types Library
 /// @notice Defines common structs, enums, and constants for the project
-library Types {
+library OprfKeyGen {
     // The roles of the nodes during key-gen. NOT_READY is the default value
     enum KeyGenRole {
         NOT_READY,
@@ -93,14 +93,14 @@ library Types {
     event KeyGenAdminRegistered(address indexed admin);
     event NotEnoughProducers(uint160 indexed oprfKeyId);
 
-    function initKeyGen(Types.OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) internal {
+    function initKeyGen(OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) internal {
         st.currentRound = Round.ONE;
         st.generatedEpoch = 0;
-        st.round1 = new Types.Round1Contribution[](numPeers);
-        st.round2 = new Types.SecretGenCiphertext[][](numPeers);
+        st.round1 = new Round1Contribution[](numPeers);
+        st.round2 = new SecretGenCiphertext[][](numPeers);
         for (uint256 i = 0; i < numPeers; i++) {
             delete st.nodeRoles[peerAddresses[i]];
-            st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
+            st.round2[i] = new SecretGenCiphertext[](numPeers);
         }
         st.shareCommitments = new BabyJubJub.Affine[](numPeers);
         st.prevShareCommitments = new BabyJubJub.Affine[](numPeers);
@@ -109,7 +109,7 @@ library Types {
     }
 
     function initReshare(
-        Types.OprfKeyGenState storage st,
+        OprfKeyGenState storage st,
         uint256 numPeers,
         address[] memory peerAddresses,
         uint128 generatedEpoch
@@ -118,30 +118,30 @@ library Types {
 
         st.currentRound = Round.ONE;
         st.generatedEpoch = generatedEpoch;
-        st.round1 = new Types.Round1Contribution[](numPeers);
-        st.round2 = new Types.SecretGenCiphertext[][](numPeers);
+        st.round1 = new Round1Contribution[](numPeers);
+        st.round2 = new SecretGenCiphertext[][](numPeers);
         for (uint256 i = 0; i < numPeers; i++) {
             delete st.nodeRoles[peerAddresses[i]];
-            st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
+            st.round2[i] = new SecretGenCiphertext[](numPeers);
         }
         st.shareCommitments = new BabyJubJub.Affine[](numPeers);
         st.round2Done = new bool[](numPeers);
         st.round3Done = new bool[](numPeers);
     }
 
-    function reset(Types.OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) internal {
+    function reset(OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) internal {
         _reset(st, numPeers, peerAddresses);
         st.currentRound = Round.NOT_STARTED;
     }
 
-    function deleteSt(Types.OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) internal {
+    function deleteSt(OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) internal {
         _reset(st, numPeers, peerAddresses);
         delete st.lagrangeCoeffs;
         delete st.prevShareCommitments;
         st.currentRound = Round.DELETED;
     }
 
-    function _reset(Types.OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) private {
+    function _reset(OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) private {
         delete st.keyAggregate;
         delete st.round2Done;
         delete st.round3Done;

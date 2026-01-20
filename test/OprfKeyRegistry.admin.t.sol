@@ -3,10 +3,10 @@ pragma solidity ^0.8.20;
 
 import {BabyJubJub} from "../src/BabyJubJub.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
-import {Types} from "../src/Types.sol";
 import {Verifier as VerifierKeyGen13} from "../src/VerifierKeyGen13.sol";
 
 contract OprfKeyRegistryTest is Test {
@@ -217,13 +217,13 @@ contract OprfKeyRegistryTest is Test {
         vm.startPrank(taceoAdmin);
         // register another admin
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenAdminRegistered(alice);
+        emit OprfKeyGen.KeyGenAdminRegistered(alice);
         oprfKeyRegistry.addKeyGenAdmin(alice);
         assertEq(2, oprfKeyRegistry.amountKeygenAdmins());
 
         // revoke taceo
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenAdminRevoked(taceoAdmin);
+        emit OprfKeyGen.KeyGenAdminRevoked(taceoAdmin);
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
 
