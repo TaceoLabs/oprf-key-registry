@@ -18,6 +18,7 @@ library OprfKeyGen {
         ONE,
         TWO,
         THREE,
+        // currently not used other than preventing that this key-gen is used for anything else
         STUCK,
         DELETED
     }
