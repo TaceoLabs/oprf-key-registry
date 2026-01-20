@@ -69,12 +69,6 @@ library OprfKeyGen {
         Round currentRound;
     }
 
-    struct Groth16Proof {
-        uint256[2] pA;
-        uint256[2][2] pB;
-        uint256[2] pC;
-    }
-
     // Event that will be emitted during transaction of key-gens. This should signal the MPC-nodes that their transaction was successfully registered.
     event KeyGenConfirmation(uint160 indexed oprfKeyId, uint16 partyId, uint8 round, uint128 epoch);
     // events for key-gen
