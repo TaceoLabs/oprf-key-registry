@@ -24,6 +24,59 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         reshare2();
     }
 
+    function testReshare1ThenDelete() public {
+        uint160 oprfKeyId = 42;
+        testKeyGen();
+        reshare1();
+
+        deleteOprfKey(oprfKeyId);
+        checkGeneratedIsDeleted(oprfKeyId);
+
+        // check cannot start key-gen/reshare
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, 42));
+        oprfKeyRegistry.initKeyGen(oprfKeyId);
+
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, 42));
+        oprfKeyRegistry.initReshare(oprfKeyId);
+        vm.stopPrank();
+    }
+
+    function testReshare2ThenDelete() public {
+        uint160 oprfKeyId = 42;
+        testReshare1();
+        reshare2();
+
+        deleteOprfKey(oprfKeyId);
+        checkGeneratedIsDeleted(oprfKeyId);
+
+        // check cannot start key-gen/reshare
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, 42));
+        oprfKeyRegistry.initKeyGen(oprfKeyId);
+
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, 42));
+        oprfKeyRegistry.initReshare(oprfKeyId);
+        vm.stopPrank();
+    }
+
+    function testInitReshareResubmit() public {
+        uint160 oprfKeyId = 42;
+        uint128 generatedEpoch = 1;
+        testKeyGen();
+        initReshare(oprfKeyId, generatedEpoch);
+
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.AlreadySubmitted.selector));
+        oprfKeyRegistry.initReshare(oprfKeyId);
+
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.AlreadySubmitted.selector));
+        oprfKeyRegistry.initKeyGen(oprfKeyId);
+    }
+
     function reshare1() private {
         uint160 oprfKeyId = 42;
         uint128 generatedEpoch = 1;
@@ -52,28 +105,46 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         checkGeneratedKey(oprfKeyId, generatedEpoch);
     }
 
-    function testAbortAfterKeyGenMultipleTimes() public {
+    function testAbortAfterKeyGenThenReshare() public {
         uint160 oprfKeyId = 42;
         testKeyGen();
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
+
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
+        emit Types.KeyGenAbort(oprfKeyId);
+        oprfKeyRegistry.abortKeyGen(oprfKeyId);
+        vm.stopPrank();
+
         checkGeneratedKey(oprfKeyId, 0);
+
+        // cannot submit round 1
+        vm.prank(carol);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.carolReshare1Round1Contribution());
+        vm.stopPrank();
+
         // can still do a reshare 1 with correct epoch
         reshare1();
     }
 
-    function testAbortAfterReshareMultipleTimes() public {
+    function testAbortAfterReshareThenReshare() public {
         uint160 oprfKeyId = 42;
         testReshare1();
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
+
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
+        emit Types.KeyGenAbort(oprfKeyId);
+        oprfKeyRegistry.abortKeyGen(oprfKeyId);
+        vm.stopPrank();
+
         checkGeneratedKey(oprfKeyId, 1);
+
+        // cannot submit round 1
+        vm.prank(carol);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.carolReshare1Round1Contribution());
+        vm.stopPrank();
+
         // can still do a reshare 2 with correct epoch
         reshare2();
     }
@@ -90,6 +161,12 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
         oprfKeyRegistry.abortKeyGen(oprfKeyId);
         vm.stopPrank();
+
+        // cannot continue
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
+        vm.stopPrank();
     }
 
     function testAbortDuringKeyGenAndAddRound2Contribution() public {
@@ -102,7 +179,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // we never create a key therefore we get unknown ID
         vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.carolReshare2Round2Contribution());
         vm.stopPrank();
         testReshare2();
@@ -118,7 +195,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // we never create a key therefore we get unknown ID
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
         testReshare2();
@@ -156,34 +233,6 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function testAbortAfterReshareAndAddRound2Contribution() public {
-        uint160 oprfKeyId = 42;
-        testReshare1();
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-
-        vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.carolReshare2Round2Contribution());
-        vm.stopPrank();
-        reshare2();
-    }
-
-    function testAbortAfterReshareAndAddRound3Contribution() public {
-        uint160 oprfKeyId = 42;
-        testReshare1();
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-
-        vm.prank(carol);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
-        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
-        vm.stopPrank();
-        reshare2();
-    }
-
     function testAbortDuringReshareMultipleTimes() public {
         // make a normal key-gen for id 42;
         testKeyGen();
@@ -206,11 +255,14 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
         // abort during round 1
         abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
-        abortKeyGen(oprfKeyId);
+
+        // second abort is an error
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
+        emit Types.KeyGenAbort(oprfKeyId);
+        oprfKeyRegistry.abortKeyGen(oprfKeyId);
+        vm.stopPrank();
+
         reshare1();
     }
 
@@ -320,12 +372,6 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
         abortKeyGen(oprfKeyId);
         reshare1();
-    }
-
-    function testAbortAfterReshare() public {
-        uint160 oprfKeyId = 42;
-        testReshare1();
-        abortKeyGen(oprfKeyId);
     }
 
     function initReshare(uint160 oprfKeyId, uint128 generatedEpoch) private {

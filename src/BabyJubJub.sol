@@ -338,6 +338,23 @@ library BabyJubJub {
         return p.x == 0 && p.y == 1;
     }
 
+    /// @notice Checks whether an affine point is initialized.
+    ///
+    /// @param p The point.
+    /// @return True iff the x and y coordinates are 0.
+    function isEmpty(Affine calldata p) external pure returns (bool) {
+        return p.x == 0 && p.y == 0;
+    }
+
+    /// @notice Checks whether two affine points are equal, by checking their x and y coordinates for equality.
+    ///
+    /// @param lhs The left hand side.
+    /// @param rhs The right hand side.
+    /// @return True iff the x and y coordinates are 0.
+    function isEqual(Affine calldata lhs, Affine calldata rhs) external pure returns (bool) {
+        return lhs.x == rhs.x && lhs.y == rhs.y;
+    }
+
     /// @notice Checks if a point in affine form is on curve: a*x^2 + y^2 = 1 + d*x^2*y^2 and its coordinates are in the basefield (smaller than Q).
     ///
     /// @param p The affine point.

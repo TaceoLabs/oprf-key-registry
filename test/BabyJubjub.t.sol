@@ -5,6 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {BabyJubJub} from "../src/BabyJubJub.sol";
 
 contract BabyJubJubTest is Test {
+    using BabyJubJub for BabyJubJub.Affine;
+
     uint256 constant TWO_G_X = 10031262171927540148667355526369034398030886437092045105752248699557385197826;
     uint256 constant TWO_G_Y = 633281375905621697187330766174974863687049529291089048651929454608812697683;
 
@@ -21,6 +23,19 @@ contract BabyJubJubTest is Test {
     function testGeneratorOnCurve() public pure {
         assertTrue(BabyJubJub.isOnCurve(BabyJubJub.generator()));
         assertTrue(BabyJubJub.isInCorrectSubgroupAssumingOnCurve(BabyJubJub.generator()));
+    }
+
+    function testIsEmpty() public pure {
+        assertFalse(BabyJubJub.identity().isEmpty());
+        assertFalse(BabyJubJub.generator().isEmpty());
+        BabyJubJub.Affine memory zeroPoint = BabyJubJub.Affine({x: 0, y: 0});
+        assertTrue(zeroPoint.isEmpty());
+    }
+
+    function testIsEqual() public pure {
+        assertFalse(BabyJubJub.isEqual(BabyJubJub.identity(), BabyJubJub.generator()));
+        assertTrue(BabyJubJub.isEqual(BabyJubJub.generator(), BabyJubJub.generator()));
+        assertTrue(BabyJubJub.isEqual(BabyJubJub.identity(), BabyJubJub.identity()));
     }
 
     function doSingleLagrangeCheckDeg1(uint8[2] memory ins, uint256[3] memory should) private pure {

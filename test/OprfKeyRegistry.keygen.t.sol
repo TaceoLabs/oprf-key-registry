@@ -125,10 +125,73 @@ contract OprfKeyRegistryKeyGenTest is Test {
         testKeyGen();
     }
 
-    function testAbortAfterKeyGen() public {
+    function testDeleteAfterInitKeyGenShouldFail() public {
         uint160 oprfKeyId = 42;
-        testKeyGen();
-        abortKeyGen(oprfKeyId);
+        initKeyGen(oprfKeyId);
+
+        vm.prank(taceoAdmin);
+        // now delete
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
+        vm.stopPrank();
+
+        // finish key-gen
+        keyGenRound1Contributions(oprfKeyId);
+        keyGenRound2Contributions(oprfKeyId);
+        keyGenRound3Contributions(oprfKeyId);
+
+        checkGeneratedKey(oprfKeyId, 0);
+    }
+
+    function testDeleteBeforeRound1() public {
+        uint160 oprfKeyId = 42;
+        initKeyGen(oprfKeyId);
+
+        vm.prank(taceoAdmin);
+        // now delete
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
+        vm.stopPrank();
+
+        // finish key-gen
+        keyGenRound1Contributions(oprfKeyId);
+        keyGenRound2Contributions(oprfKeyId);
+        keyGenRound3Contributions(oprfKeyId);
+
+        checkGeneratedKey(oprfKeyId, 0);
+    }
+
+    function testDeleteBeforeRound2() public {
+        uint160 oprfKeyId = 42;
+        initKeyGen(oprfKeyId);
+        keyGenRound1Contributions(oprfKeyId);
+        vm.prank(taceoAdmin);
+        // now delete
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
+        vm.stopPrank();
+        // finish key-gen
+        keyGenRound2Contributions(oprfKeyId);
+        keyGenRound3Contributions(oprfKeyId);
+
+        checkGeneratedKey(oprfKeyId, 0);
+    }
+
+    function testDeleteBeforeRound3() public {
+        uint160 oprfKeyId = 42;
+        initKeyGen(oprfKeyId);
+        keyGenRound1Contributions(oprfKeyId);
+        keyGenRound2Contributions(oprfKeyId);
+
+        vm.prank(taceoAdmin);
+        // now delete
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector));
+        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
+        vm.stopPrank();
+        // finish key-gen
+        keyGenRound3Contributions(oprfKeyId);
+
+        checkGeneratedKey(oprfKeyId, 0);
     }
 
     function testKeyGen() public {
@@ -139,6 +202,19 @@ contract OprfKeyRegistryKeyGenTest is Test {
         keyGenRound3Contributions(oprfKeyId);
 
         checkGeneratedKey(oprfKeyId, 0);
+    }
+
+    function testKeyGenThenDelete() public {
+        uint160 oprfKeyId = 42;
+        initKeyGen(oprfKeyId);
+        keyGenRound1Contributions(oprfKeyId);
+        keyGenRound2Contributions(oprfKeyId);
+        keyGenRound3Contributions(oprfKeyId);
+
+        checkGeneratedKey(oprfKeyId, 0);
+
+        deleteOprfKey(oprfKeyId);
+        checkGeneratedIsDeleted(oprfKeyId);
     }
 
     function keyGenRound1Contributions(uint160 oprfKeyId) internal {
@@ -221,11 +297,28 @@ contract OprfKeyRegistryKeyGenTest is Test {
         assertEq(oprfKeyAndEpoch.epoch, generatedEpoch);
     }
 
+    function checkGeneratedIsDeleted(uint160 oprfKeyId) internal {
+        // check that the key is deleted
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, 42));
+        oprfKeyRegistry.getOprfPublicKey(oprfKeyId);
+
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, 42));
+        oprfKeyRegistry.getOprfPublicKeyAndEpoch(oprfKeyId);
+    }
+
     function abortKeyGen(uint160 oprfKeyId) internal {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
         emit Types.KeyGenAbort(oprfKeyId);
         oprfKeyRegistry.abortKeyGen(oprfKeyId);
+        vm.stopPrank();
+    }
+
+    function deleteOprfKey(uint160 oprfKeyId) internal {
+        vm.prank(taceoAdmin);
+        vm.expectEmit(true, true, true, true);
+        emit Types.KeyDeletion(oprfKeyId);
+        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
     }
 }
