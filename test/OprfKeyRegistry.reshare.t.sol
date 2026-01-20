@@ -12,7 +12,7 @@ import {OprfKeyRegistryKeyGenTest} from "./OprfKeyRegistry.keygen.t.sol";
 import {Verifier as VerifierKeyGen13} from "../src/VerifierKeyGen13.sol";
 
 contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
-    using Types for Types.BabyJubJubElement;
+    using BabyJubJub for BabyJubJub.Affine;
 
     function testReshare1() public {
         testKeyGen();

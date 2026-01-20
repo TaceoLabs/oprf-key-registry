@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {BabyJubJub} from "./BabyJubJub.sol";
+
 /// @title Types Library
 /// @notice Defines common structs, enums, and constants for the project
 library Types {
@@ -17,17 +19,17 @@ library Types {
     }
 
     struct RegisteredOprfPublicKey {
-        BabyJubJubElement key;
+        BabyJubJub.Affine key;
         uint128 epoch;
     }
 
     struct Round1Contribution {
         // the commitment to the secret
-        BabyJubJubElement commShare;
+        BabyJubJub.Affine commShare;
         // hash of the polynomial created by participant
         uint256 commCoeffs;
         // ephemeral public key for this round
-        BabyJubJubElement ephPubKey;
+        BabyJubJub.Affine ephPubKey;
     }
 
     struct Round2Contribution {
@@ -39,7 +41,7 @@ library Types {
     struct SecretGenCiphertext {
         uint256 nonce;
         uint256 cipher;
-        BabyJubJubElement commitment;
+        BabyJubJub.Affine commitment;
     }
 
     struct OprfKeyGenState {
@@ -47,9 +49,9 @@ library Types {
         uint256[] lagrangeCoeffs;
         Round1Contribution[] round1;
         SecretGenCiphertext[][] round2;
-        BabyJubJubElement[] shareCommitments;
-        BabyJubJubElement[] prevShareCommitments;
-        BabyJubJubElement keyAggregate;
+        BabyJubJub.Affine[] shareCommitments;
+        BabyJubJub.Affine[] prevShareCommitments;
+        BabyJubJub.Affine keyAggregate;
         uint128 numProducers;
         uint128 generatedEpoch;
         bool[] round2Done;
@@ -65,11 +67,6 @@ library Types {
         uint256[2] pA;
         uint256[2][2] pB;
         uint256[2] pC;
-    }
-
-    struct BabyJubJubElement {
-        uint256 x;
-        uint256 y;
     }
 
     // Event that will be emitted during transaction of key-gens. This should signal the MPC-nodes that their transaction was successfully registered.

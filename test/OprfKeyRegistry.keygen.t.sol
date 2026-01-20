@@ -11,13 +11,12 @@ import {Types} from "../src/Types.sol";
 import {Verifier as VerifierKeyGen13} from "../src/VerifierKeyGen13.sol";
 
 contract OprfKeyRegistryKeyGenTest is Test {
-    using Types for Types.BabyJubJubElement;
+    using BabyJubJub for BabyJubJub.Affine;
 
     uint256 public constant THRESHOLD = 2;
     uint256 public constant MAX_PEERS = 3;
 
     OprfKeyRegistry public oprfKeyRegistry;
-    BabyJubJub public accumulator;
     VerifierKeyGen13 public verifierKeyGen;
     ERC1967Proxy public proxy;
 
@@ -27,13 +26,12 @@ contract OprfKeyRegistryKeyGenTest is Test {
     address taceoAdmin = address(0x4);
 
     function setUp() public {
-        accumulator = new BabyJubJub();
         verifierKeyGen = new VerifierKeyGen13();
         // Deploy implementation
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, accumulator, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);
@@ -211,7 +209,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
     function checkGeneratedKey(uint160 oprfKeyId, uint128 generatedEpoch) internal view {
         // check that the computed key is correct
-        Types.BabyJubJubElement memory oprfKey = oprfKeyRegistry.getOprfPublicKey(oprfKeyId);
+        BabyJubJub.Affine memory oprfKey = oprfKeyRegistry.getOprfPublicKey(oprfKeyId);
         assertEq(oprfKey.x, Contributions.SHOULD_OPRF_PUBLIC_KEY_X);
         assertEq(oprfKey.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
 

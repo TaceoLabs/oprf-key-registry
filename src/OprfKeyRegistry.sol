@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Types} from "./Types.sol";
+import {BabyJubJub} from "./BabyJubJub.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -25,23 +26,12 @@ interface IVerifierKeyGen25 {
     ) external view;
 }
 
-interface IBabyJubJub {
-    function add(uint256 x1, uint256 y1, uint256 x2, uint256 y2) external view returns (uint256 x3, uint256 y3);
-    function isOnCurve(uint256 x, uint256 y) external pure returns (bool);
-    function isInCorrectSubgroupAssumingOnCurve(uint256 x, uint256 y) external pure returns (bool);
-    function computeLagrangeCoefficiants(uint256[] memory ids, uint256 threshold, uint256 numPeers)
-        external
-        pure
-        returns (uint256[] memory coeffs);
-    function scalarMul(uint256 scalar, uint256 x, uint256 y) external pure returns (uint256 x_res, uint256 y_res);
-}
-
 interface IOprfKeyRegistry {
     function initKeyGen(uint160 oprfKeyId) external;
 }
 
 contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
-    using Types for Types.BabyJubJubElement;
+    using BabyJubJub for BabyJubJub.Affine;
     using Types for Types.Groth16Proof;
     using Types for Types.OprfPeer;
     using Types for Types.Round1Contribution;
@@ -55,7 +45,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     uint256 public amountKeygenAdmins;
 
     address public keyGenVerifier;
-    IBabyJubJub public accumulator;
     uint256 public threshold;
     uint256 public numPeers;
 
@@ -129,23 +118,19 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     /// @notice Initializer function to set up the OprfKeyRegistry contract, this is not a constructor due to the use of upgradeable proxies.
     /// @param _keygenAdmin The address of the key generation administrator, only party that is allowed to start key generation processes.
     /// @param _keyGenVerifierAddress The address of the Groth16 verifier contract for key generation (needs to be compatible with threshold numPeers values).
-    /// @param _accumulatorAddress The address of the BabyJubJub accumulator contract.
     /// @param _threshold The threshold number of peers required for key generation.
     /// @param _numPeers The number of peers participating in the key generation.
-    function initialize(
-        address _keygenAdmin,
-        address _keyGenVerifierAddress,
-        address _accumulatorAddress,
-        uint256 _threshold,
-        uint256 _numPeers
-    ) public virtual initializer {
+    function initialize(address _keygenAdmin, address _keyGenVerifierAddress, uint256 _threshold, uint256 _numPeers)
+        public
+        virtual
+        initializer
+    {
         __Ownable_init(msg.sender);
         __Ownable2Step_init();
         require(_numPeers < 1 << 16, "only supports party size up to 2^16");
         keygenAdmins[_keygenAdmin] = true;
         amountKeygenAdmins += 1;
         keyGenVerifier = _keyGenVerifierAddress;
-        accumulator = IBabyJubJub(_accumulatorAddress);
         threshold = _threshold;
         numPeers = _numPeers;
         isContractReady = false;
@@ -225,8 +210,8 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             delete st.nodeRoles[peerAddresses[i]];
             st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
         }
-        st.shareCommitments = new Types.BabyJubJubElement[](numPeers);
-        st.prevShareCommitments = new Types.BabyJubJubElement[](numPeers);
+        st.shareCommitments = new BabyJubJub.Affine[](numPeers);
+        st.prevShareCommitments = new BabyJubJub.Affine[](numPeers);
         st.round2Done = new bool[](numPeers);
         st.round3Done = new bool[](numPeers);
         st.exists = true;
@@ -346,7 +331,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         st.nodeRoles[msg.sender] = Types.KeyGenRole.PRODUCER;
         st.numProducers += 1;
         // Add BabyJubJub Elements together and keep running total
-        _addToAggregate(st.keyAggregate, data.commShare.x, data.commShare.y);
+        _addToAggregate(st.keyAggregate, data.commShare);
         // everyone is a producer therefore we wait for numPeers amount producers
         _tryEmitRound2Event(oprfKeyId, numPeers, st);
         // Emit the transaction confirmation
@@ -389,7 +374,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             // both commitments are set and we still need more producers
             _curveChecks(data.commShare);
             // in contrast to key-gen we don't compute the running total, but we can check whether the commitments are correct from the previous reshare/key-gen.
-            Types.BabyJubJubElement memory shouldCommitment = st.prevShareCommitments[partyId];
+            BabyJubJub.Affine memory shouldCommitment = st.prevShareCommitments[partyId];
             if (!_isEqual(shouldCommitment, data.commShare)) {
                 revert BadContribution();
             }
@@ -408,7 +393,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
                     }
                 }
                 // then compute the coefficients
-                st.lagrangeCoeffs = accumulator.computeLagrangeCoefficiants(ids, threshold, numPeers);
+                st.lagrangeCoeffs = BabyJubJub.computeLagrangeCoefficiants(ids, threshold, numPeers);
             }
         }
         // we need a contribution from everyone but only threshold many producers. If we don't manage to find enough producers, we will emit an event so that the admin can intervene.
@@ -452,7 +437,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             // for the key-gen we simply accumulate all commitments as the resulting shamir-share should have contributions from all parties -> just add all together
             for (uint256 i = 0; i < numPeers; ++i) {
                 _curveChecks(data.ciphers[i].commitment);
-                _addToAggregate(st.shareCommitments[i], data.ciphers[i].commitment.x, data.ciphers[i].commitment.y);
+                _addToAggregate(st.shareCommitments[i], data.ciphers[i].commitment);
                 st.round2[i][partyId] = data.ciphers[i];
             }
         } else {
@@ -461,9 +446,8 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             require(lagrange > 0, "SAFETY CHECK: this should never happen. This means there is a bug");
             for (uint256 i = 0; i < numPeers; ++i) {
                 _curveChecks(data.ciphers[i].commitment);
-                (uint256 x, uint256 y) =
-                    accumulator.scalarMul(lagrange, data.ciphers[i].commitment.x, data.ciphers[i].commitment.y);
-                _addToAggregate(st.shareCommitments[i], x, y);
+                BabyJubJub.Affine memory lagrangeResult = BabyJubJub.scalarMul(lagrange, data.ciphers[i].commitment);
+                _addToAggregate(st.shareCommitments[i], lagrangeResult);
                 st.round2[i][partyId] = data.ciphers[i];
             }
         }
@@ -492,7 +476,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
             uint256[PUBLIC_INPUT_LENGTH_KEYGEN_13] memory publicInputs;
 
-            Types.BabyJubJubElement[] memory pubKeyList = _loadPeerPublicKeys(st);
+            BabyJubJub.Affine[] memory pubKeyList = _loadPeerPublicKeys(st);
             publicInputs[0] = pubKeyList[partyId].x;
             publicInputs[1] = pubKeyList[partyId].y;
             publicInputs[2] = st.round1[partyId].commShare.x;
@@ -515,7 +499,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
             uint256[PUBLIC_INPUT_LENGTH_KEYGEN_25] memory publicInputs;
 
-            Types.BabyJubJubElement[] memory pubKeyList = _loadPeerPublicKeys(st);
+            BabyJubJub.Affine[] memory pubKeyList = _loadPeerPublicKeys(st);
             publicInputs[0] = pubKeyList[partyId].x;
             publicInputs[1] = pubKeyList[partyId].y;
             publicInputs[2] = st.round1[partyId].commShare.x;
@@ -609,7 +593,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         virtual
         isReady
         onlyProxy
-        returns (Types.BabyJubJubElement[] memory)
+        returns (BabyJubJub.Affine[] memory)
     {
         // check if a participant
         Types.OprfPeer memory peer = addressToPeer[msg.sender];
@@ -623,7 +607,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check if we are a producer
         if (Types.KeyGenRole.PRODUCER != st.nodeRoles[msg.sender]) {
             // we are not a producer -> return empty array
-            return new Types.BabyJubJubElement[](0);
+            return new BabyJubJub.Affine[](0);
         }
         return _loadPeerPublicKeys(st);
     }
@@ -637,7 +621,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         virtual
         isReady
         onlyProxy
-        returns (Types.BabyJubJubElement[] memory)
+        returns (BabyJubJub.Affine[] memory)
     {
         // check if a participant
         Types.OprfPeer memory peer = addressToPeer[msg.sender];
@@ -698,7 +682,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         virtual
         onlyProxy
         isReady
-        returns (Types.BabyJubJubElement memory)
+        returns (BabyJubJub.Affine memory)
     {
         Types.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
         if (_isEmpty(oprfPublicKey.key)) revert UnknownId(oprfKeyId);
@@ -768,13 +752,9 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         return st;
     }
 
-    function _loadPeerPublicKeys(Types.OprfKeyGenState storage st)
-        internal
-        view
-        returns (Types.BabyJubJubElement[] memory)
-    {
+    function _loadPeerPublicKeys(Types.OprfKeyGenState storage st) internal view returns (BabyJubJub.Affine[] memory) {
         if (!st.round2EventEmitted) revert WrongRound();
-        Types.BabyJubJubElement[] memory pubKeyList = new Types.BabyJubJubElement[](numPeers);
+        BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](numPeers);
         for (uint256 i = 0; i < numPeers; ++i) {
             pubKeyList[i] = st.round1[i].ephPubKey;
         }
@@ -784,10 +764,10 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     function _loadProducerPeerPublicKeys(Types.OprfKeyGenState storage st)
         internal
         view
-        returns (Types.BabyJubJubElement[] memory)
+        returns (BabyJubJub.Affine[] memory)
     {
         if (!st.round2EventEmitted) revert WrongRound();
-        Types.BabyJubJubElement[] memory pubKeyList = new Types.BabyJubJubElement[](st.numProducers);
+        BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](st.numProducers);
         uint256 counter = 0;
         for (uint256 i = 0; i < numPeers; ++i) {
             if (Types.KeyGenRole.PRODUCER == st.nodeRoles[peerAddresses[i]]) {
@@ -809,7 +789,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
 
         st.round2EventEmitted = true;
-        st.shareCommitments = new Types.BabyJubJubElement[](numPeers);
+        st.shareCommitments = new BabyJubJub.Affine[](numPeers);
         emit Types.SecretGenRound2(oprfKeyId, st.generatedEpoch);
     }
 
@@ -829,40 +809,34 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     }
 
     // Expects that callsite enforces that point is on the curve and in the correct sub-group (i.e. call _curveCheck).
-    function _addToAggregate(Types.BabyJubJubElement storage keyAggregate, uint256 newPointX, uint256 newPointY)
+    function _addToAggregate(BabyJubJub.Affine storage keyAggregate, BabyJubJub.Affine memory commShare)
         internal
         virtual
     {
         if (_isEmpty(keyAggregate)) {
             // We checked above that the point is on curve, so we can just set it
-            keyAggregate.x = newPointX;
-            keyAggregate.y = newPointY;
+            keyAggregate.x = commShare.x;
+            keyAggregate.y = commShare.y;
             return;
         }
 
         // we checked above that the new point is on curve
         // the initial aggregate is on curve as well, checked inside the if above
         // induction: sum of two on-curve points is on-curve, so the result is on-curve as well
-        (uint256 resultX, uint256 resultY) = accumulator.add(keyAggregate.x, keyAggregate.y, newPointX, newPointY);
-
-        keyAggregate.x = resultX;
-        keyAggregate.y = resultY;
+        BabyJubJub.Affine memory result = BabyJubJub.add(keyAggregate, commShare);
+        keyAggregate.x = result.x;
+        keyAggregate.y = result.y;
     }
 
-    function _isEqual(Types.BabyJubJubElement memory lhs, Types.BabyJubJubElement memory rhs)
-        internal
-        pure
-        virtual
-        returns (bool)
-    {
+    function _isEqual(BabyJubJub.Affine memory lhs, BabyJubJub.Affine memory rhs) internal pure virtual returns (bool) {
         return lhs.x == rhs.x && lhs.y == rhs.y;
     }
 
-    function _isInfinity(Types.BabyJubJubElement memory element) internal pure virtual returns (bool) {
+    function _isInfinity(BabyJubJub.Affine memory element) internal pure virtual returns (bool) {
         return element.x == 0 && element.y == 1;
     }
 
-    function _isEmpty(Types.BabyJubJubElement memory element) internal pure virtual returns (bool) {
+    function _isEmpty(BabyJubJub.Affine memory element) internal pure virtual returns (bool) {
         return element.x == 0 && element.y == 0;
     }
 
@@ -872,12 +846,10 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     ///     * is not in the large sub-group
     ///
     /// this method will revert the call.
-    function _curveChecks(Types.BabyJubJubElement memory element) internal view virtual {
-        uint256 x = element.x;
-        uint256 y = element.y;
+    function _curveChecks(BabyJubJub.Affine memory element) internal view virtual {
         if (
-            _isInfinity(element) || !accumulator.isOnCurve(x, y)
-                || !accumulator.isInCorrectSubgroupAssumingOnCurve(x, y)
+            BabyJubJub.isIdentity(element) || !BabyJubJub.isOnCurve(element)
+                || !BabyJubJub.isInCorrectSubgroupAssumingOnCurve(element)
         ) {
             revert BadContribution();
         }

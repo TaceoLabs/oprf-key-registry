@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 /// @title BabyJubJub Elliptic Curve Operations
-/// @notice A helper contract for performing operations on the BabyJubJub elliptic curve. At the moment limited to point addition and curve membership check.
-contract BabyJubJub {
+/// @notice A library for performing operations on the BabyJubJub elliptic curve. At the moment limited to point addition and curve membership check.
+library BabyJubJub {
     // BN254 scalar field = BabyJubJub base field
     uint256 public constant Q = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
@@ -13,6 +13,14 @@ contract BabyJubJub {
     // BabyJubJub curve parameters
     uint256 public constant A = 168700;
     uint256 public constant D = 168696;
+
+    uint256 constant GEN_X = 5299619240641551281634865583518297030282874472190772894086521144482721001553;
+    uint256 constant GEN_Y = 16950150798460657717958625567821834550301663161624707787222815936182638968203;
+
+    struct Affine {
+        uint256 x;
+        uint256 y;
+    }
 
     /// @notice Returns the bits of the characteristic of the scalarfield in big-endian order.
     function characteristic_bits() private pure returns (uint8[251] memory) {
@@ -271,19 +279,38 @@ contract BabyJubJub {
         ];
     }
 
-    /// @notice Points are represented in Affine (x, y) coordinates.
+    /// @notice Returns the identity.
+    function identity() public pure returns (Affine memory p) {
+        p.x = 0;
+        p.y = 1;
+    }
+
+    /// @notice Returns the generator.
+    function generator() public pure returns (Affine memory p) {
+        p.x = GEN_X;
+        p.y = GEN_Y;
+    }
+
+    /// @notice Adds two affine points.
     /// This method expects that the point is on the curve and in the correct subgroup. Additionally, the method expects that the coordinates are reduced mod Q. The outputs are also reduced mod Q.
     ///
-    /// @param x1 The x-coordinate of the first point reduced mod Q
-    /// @param y1 The y-coordinate of the first point reduced mod Q
-    /// @param x2 the x-coordinate of the second point reduced mod Q
-    /// @param y2 the y-coordinate of the second point reduced mod Q
-    /// @return x3 the x-coordinate of the resulting point reduced mod Q
-    /// @return y3 the y-coordinate of the resulting point reduced mod Q
-    function add(uint256 x1, uint256 y1, uint256 x2, uint256 y2) public pure returns (uint256 x3, uint256 y3) {
+    /// @param lhs The point on the left hand side.
+    /// @param rhs The point on the right hand side.
+    /// @return res The resulting point
+    function add(Affine calldata lhs, Affine calldata rhs) external pure returns (Affine memory res) {
         // Handle identity cases
-        if (x1 == 0 && y1 == 1) return (x2, y2);
-        if (x2 == 0 && y2 == 1) return (x1, y1);
+        if (isIdentity(lhs)) {
+            res = rhs;
+            return res;
+        }
+        if (isIdentity(rhs)) {
+            res = lhs;
+            return res;
+        }
+        uint256 x1 = lhs.x;
+        uint256 y1 = lhs.y;
+        uint256 x2 = rhs.x;
+        uint256 y2 = rhs.y;
 
         uint256 x1x2 = mulmod(x1, x2, Q);
         uint256 y1y2 = mulmod(y1, y2, Q);
@@ -296,24 +323,31 @@ contract BabyJubJub {
         uint256 x3Den = 1 + dx1x2y1y2;
 
         // y3 = (y1*y2 - a*x1*x2) / (1 - d*x1*x2*y1*y2)
-        uint256 y3Num = submod(y1y2, mulmod(A, x1x2, Q), Q);
-        uint256 y3Den = submod(1, dx1x2y1y2, Q);
+        uint256 y3Num = _submod(y1y2, mulmod(A, x1x2, Q), Q);
+        uint256 y3Den = _submod(1, dx1x2y1y2, Q);
 
-        x3 = mulmod(x3Num, modInverse(x3Den, Q), Q);
-        y3 = mulmod(y3Num, modInverse(y3Den, Q), Q);
+        res.x = mulmod(x3Num, _modInverse(x3Den, Q), Q);
+        res.y = mulmod(y3Num, _modInverse(y3Den, Q), Q);
+    }
+
+    /// @notice Checks if an affine point is the identity element.
+    ///
+    /// @param p The point.
+    /// @return True iff the point is the identity element, false otherwise.
+    function isIdentity(Affine calldata p) public pure returns (bool) {
+        return p.x == 0 && p.y == 1;
     }
 
     /// @notice Checks if a point in affine form is on curve: a*x^2 + y^2 = 1 + d*x^2*y^2 and its coordinates are in the basefield (smaller than Q).
     ///
-    /// @param x The x-coordinate of the point
-    /// @param y The y-coordinate of the point
+    /// @param p The affine point.
     /// @return True if the point is on the BabyJubJub curve, false otherwise.
-    function isOnCurve(uint256 x, uint256 y) public pure returns (bool) {
-        if (x == 0 && y == 1) return true;
-        if (x >= Q || y >= Q) return false;
+    function isOnCurve(Affine calldata p) external pure returns (bool) {
+        if (isIdentity(p)) return true;
+        if (p.x >= Q || p.y >= Q) return false;
 
-        uint256 xx = mulmod(x, x, Q);
-        uint256 yy = mulmod(y, y, Q);
+        uint256 xx = mulmod(p.x, p.x, Q);
+        uint256 yy = mulmod(p.y, p.y, Q);
         uint256 axx = mulmod(A, xx, Q);
         uint256 dxxyy = mulmod(D, mulmod(xx, yy, Q), Q);
 
@@ -322,12 +356,11 @@ contract BabyJubJub {
 
     /// @notice Checks if a point in affine form is in the sub-group with the same order as the scalarfield. This method assumes that the point is on the curve and the coordinates are reduced mod Q.
     ///
-    /// @param x The x-coordinate of the point
-    /// @param y The y-coordinate of the point
+    /// @param p The affine point.
     /// @return True if the point is in the correct sub-subgroup, false otherwise.
-    function isInCorrectSubgroupAssumingOnCurve(uint256 x, uint256 y) public pure returns (bool) {
-        (uint256 x1, uint256 y1, uint256 z1) = _scalarMulInner(characteristic_bits(), 0, x, y);
-        return x1 == 0 && y1 == z1 && y != 0;
+    function isInCorrectSubgroupAssumingOnCurve(Affine calldata p) external pure returns (bool) {
+        (uint256 x1, uint256 y1, uint256 z1) = _scalarMulInner(characteristic_bits(), 0, p.x, p.y);
+        return x1 == 0 && y1 == z1 && p.y != 0;
     }
 
     /// @notice Computes the lagrange coefficients for the provided party IDs (starting at zero) and the threshold of the secret-sharing. We expect callsite to check that. Importantly, this method will always return an array with length numPeers, where lagrange coefficient of party ID is on index in the array (with zero for not participating nodes). We need this because the nodes will access this array with their partyID.
@@ -341,7 +374,7 @@ contract BabyJubJub {
     /// @param threshold The degree of the polynomial + 1
     /// @return lagrange The requested lagrange coefficients
     function computeLagrangeCoefficiants(uint256[] memory ids, uint256 threshold, uint256 numPeers)
-        public
+        external
         pure
         returns (uint256[] memory lagrange)
     {
@@ -363,30 +396,29 @@ contract BabyJubJub {
                 uint256 otherId = ids[j] + 1;
                 if (currentId != otherId) {
                     num = mulmod(num, otherId, R);
-                    den = mulmod(den, submod(otherId, currentId, R), R);
+                    den = mulmod(den, _submod(otherId, currentId, R), R);
                 }
             }
-            lagrange[ids[i]] = mulmod(num, modInverse(den, R), R);
+            lagrange[ids[i]] = mulmod(num, _modInverse(den, R), R);
         }
         return lagrange;
     }
 
-    /// @notice Computes xP, where x is an element of the scalarfield of BabyJubJub and P is an affine point on the BabyJubJub curve represented as x and y. This method reverts if scalar doesn't fit into BabyJubJub's scalarfield.
+    /// @notice Computes xP, where x is an element of the scalarfield of BabyJubJub and P is an affine point on the BabyJubJub curve. This method reverts if scalar doesn't fit into BabyJubJub's scalarfield.
     ///
     /// This method expects that the point is on the curve and in the correct subgroup. Additionally, the method expects that the coordinates are reduced mod Q. The outputs are also reduced mod Q.
     ///
     /// @param scalar The scalar for the multiplication.
-    /// @param x The x-coordinate of the affine point reduced mod Q.
-    /// @param y The y-coordinate of the affine point reduced mod Q.
-    /// @return The (x,y)-coordinates of xP
-    function scalarMul(uint256 scalar, uint256 x, uint256 y) public pure returns (uint256, uint256) {
+    /// @param p The affine point.
+    /// @return The resulting affine point.
+    function scalarMul(uint256 scalar, Affine calldata p) external pure returns (Affine memory) {
         require(scalar < R);
         if (scalar == 0) {
-            return (0, 1);
+            return identity();
         }
-        (uint8[251] memory bits, uint256 highBit) = getBits(scalar);
-        (uint256 x1, uint256 y1, uint256 z1) = _scalarMulInner(bits, highBit, x, y);
-        return toAffine(x1, y1, z1);
+        (uint8[251] memory bits, uint256 highBit) = _getBits(scalar);
+        (uint256 x1, uint256 y1, uint256 z1) = _scalarMulInner(bits, highBit, p.x, p.y);
+        return _toAffine(x1, y1, z1);
     }
 
     /// @notice Internal helper function for scalar point multiplication. Performs the actual double-and-add scalar-multiplication. The highBit parameter allows to skip the leading zeroes.
@@ -408,9 +440,9 @@ contract BabyJubJub {
         z_res = 1;
         // skip leading zeros
         for (uint256 i = highBit; i < 251; ++i) {
-            (x_res, y_res, t_res, z_res) = doubleTwistedEdwards(x_res, y_res, z_res);
+            (x_res, y_res, t_res, z_res) = _doubleTwistedEdwards(x_res, y_res, z_res);
             if (bits[i] == 1) {
-                (x_res, y_res, t_res, z_res) = addProjective(x_res, y_res, t_res, z_res, x, y);
+                (x_res, y_res, t_res, z_res) = _addProjective(x_res, y_res, t_res, z_res, x, y);
             }
         }
         return (x_res, y_res, z_res);
@@ -430,8 +462,8 @@ contract BabyJubJub {
     /// @return y_res The y-coordinate of A+B reduced mod Q.
     /// @return t_res The t-coordinate of A+B reduced mod Q.
     /// @return z_res The z-coordinate of A+B reduced mod Q.
-    function addProjective(uint256 x1, uint256 y1, uint256 t1, uint256 z1, uint256 x2, uint256 y2)
-        public
+    function _addProjective(uint256 x1, uint256 y1, uint256 t1, uint256 z1, uint256 x2, uint256 y2)
+        private
         pure
         returns (uint256 x_res, uint256 y_res, uint256 t_res, uint256 z_res)
     {
@@ -453,14 +485,14 @@ contract BabyJubJub {
         uint256 x1y1 = x1 + y1;
         // SAFETY: can add without mod because Q is 254 bits and we expect point to be on the curve
         uint256 x2y2 = x2 + y2;
-        uint256 e = submod(submod(mulmod(x1y1, x2y2, Q), a, Q), b, Q);
+        uint256 e = _submod(_submod(mulmod(x1y1, x2y2, Q), a, Q), b, Q);
         // F = D-C
-        uint256 f = submod(d, c, Q);
+        uint256 f = _submod(d, c, Q);
         // G = D+C
         // SAFETY: can add without mod because Q is 254 bits and we expect point to be on the curve
         uint256 g = d + c;
         // H = B-a*A
-        uint256 h = submod(b, mulmod(A, a, Q), Q);
+        uint256 h = _submod(b, mulmod(A, a, Q), Q);
         // X3 = E*F
         x_res = mulmod(e, f, Q);
         // Y3 = G*H
@@ -478,27 +510,26 @@ contract BabyJubJub {
     /// @param y1 The y-coordinate of the projective point.
     /// @param z1 The z-coordinate of the projective point.
     ///
-    /// @return x_res The x-coordinate of the affine point.
-    /// @return y_res The y-coordinate of the affine point.
-    function toAffine(uint256 x1, uint256 y1, uint256 z1) public pure returns (uint256 x_res, uint256 y_res) {
+    /// @return res The affine point
+    function _toAffine(uint256 x1, uint256 y1, uint256 z1) private pure returns (Affine memory res) {
         // The projective point X, Y, Z is represented in the affine coordinates as X/Z, Y/Z.
         if (x1 == 0 && y1 == z1 && y1 != 1) {
-            x_res = 0;
-            y_res = 1;
+            res.x = 0;
+            res.y = 1;
         } else if (z1 == 1) {
             // If Z is one, the point is already normalized.
-            x_res = x1;
-            y_res = y1;
+            res.x = x1;
+            res.y = y1;
         } else {
             // Z is nonzero, so it must have an inverse in a field.
-            uint256 z_inv = modInverse(z1, Q);
-            x_res = mulmod(x1, z_inv, Q);
-            y_res = mulmod(y1, z_inv, Q);
+            uint256 z_inv = _modInverse(z1, Q);
+            res.x = mulmod(x1, z_inv, Q);
+            res.y = mulmod(y1, z_inv, Q);
         }
     }
 
     ///Helper function for scalarMul(scalar, x, y). Bit-decomposes the provided value in big-endian form and returns the index of the highest bit (to skip leading zeros). Ignores highest five bits as this should only be used for scalar mul and the scalarfield only has 251 bits.
-    function getBits(uint256 value) private pure returns (uint8[251] memory bits, uint256 highBit) {
+    function _getBits(uint256 value) private pure returns (uint8[251] memory bits, uint256 highBit) {
         // set high bit to 256 -> cannot happen as we only go up to 251 bits and if all zeroes, will return 256.
         highBit = 256;
         value <<= 5;
@@ -522,8 +553,8 @@ contract BabyJubJub {
     /// @param y3 The y-coordinate of the doubled point reduced mod Q.
     /// @param t3 The t-coordinate of the doubled point reduced mod Q.
     /// @param z3 The z-coordinate of the doubled point reduced mod Q.
-    function doubleTwistedEdwards(uint256 x, uint256 y, uint256 z)
-        public
+    function _doubleTwistedEdwards(uint256 x, uint256 y, uint256 z)
+        private
         pure
         returns (uint256 x3, uint256 y3, uint256 t3, uint256 z3)
     {
@@ -545,14 +576,14 @@ contract BabyJubJub {
         // SAFETY: can add without mod because Q is 254 bits
         uint256 x1y1 = x + y;
         uint256 x1y12 = mulmod(x1y1, x1y1, Q);
-        uint256 e = submod(submod(x1y12, a, Q), b, Q);
+        uint256 e = _submod(_submod(x1y12, a, Q), b, Q);
         // G = D + B
         // SAFETY: can add without mod because Q is 254 bits
         uint256 g = d + b;
         // F = G - C
-        uint256 f = submod(g, c, Q);
+        uint256 f = _submod(g, c, Q);
         // H = D - B
-        uint256 h = submod(d, b, Q);
+        uint256 h = _submod(d, b, Q);
         // X3 = E * F
         x3 = mulmod(e, f, Q);
         // Y3 = G * H
@@ -563,15 +594,15 @@ contract BabyJubJub {
         z3 = mulmod(f, g, Q);
     }
 
-    function submod(uint256 a, uint256 b, uint256 m) private pure returns (uint256) {
+    function _submod(uint256 a, uint256 b, uint256 m) private pure returns (uint256) {
         return (a >= b) ? (a - b) : m - (b - a);
     }
 
-    function modInverse(uint256 a, uint256 P) private pure returns (uint256) {
-        return expmod(a, P - 2, P);
+    function _modInverse(uint256 a, uint256 P) private pure returns (uint256) {
+        return _expmod(a, P - 2, P);
     }
 
-    function expmod(uint256 base, uint256 e, uint256 m) private pure returns (uint256 result) {
+    function _expmod(uint256 base, uint256 e, uint256 m) private pure returns (uint256 result) {
         result = 1;
         base = base % m;
         while (e > 0) {

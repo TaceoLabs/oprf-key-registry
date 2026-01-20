@@ -36,13 +36,12 @@ contract OprfKeyRegistryV2Mock is OprfKeyRegistry {
 }
 
 contract OprfKeyRegistryUpgradeTest is Test {
-    using Types for Types.BabyJubJubElement;
+    using BabyJubJub for BabyJubJub.Affine;
 
     uint256 public constant THRESHOLD = 2;
     uint256 public constant MAX_PEERS = 3;
 
     OprfKeyRegistry public oprfKeyRegistry;
-    BabyJubJub public accumulator;
     VerifierKeyGen13 public verifierKeyGen;
     ERC1967Proxy public proxy;
 
@@ -53,13 +52,12 @@ contract OprfKeyRegistryUpgradeTest is Test {
     address initOwner = 0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496;
 
     function setUp() public {
-        accumulator = new BabyJubJub();
         verifierKeyGen = new VerifierKeyGen13();
         // Deploy implementation
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, accumulator, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);
@@ -160,7 +158,7 @@ contract OprfKeyRegistryUpgradeTest is Test {
         vm.stopPrank();
 
         // check that the computed nullifier is correct
-        Types.BabyJubJubElement memory oprfKey = oprfKeyRegistry.getOprfPublicKey(oprfKeyId);
+        BabyJubJub.Affine memory oprfKey = oprfKeyRegistry.getOprfPublicKey(oprfKeyId);
         assertEq(oprfKey.x, Contributions.SHOULD_OPRF_PUBLIC_KEY_X);
         assertEq(oprfKey.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
 
@@ -172,7 +170,7 @@ contract OprfKeyRegistryUpgradeTest is Test {
         OprfKeyRegistryV2Mock oprfKeyRegistryV2 = OprfKeyRegistryV2Mock(address(proxy));
 
         // Verify storage was preserved
-        Types.BabyJubJubElement memory oprfKeyV2 = oprfKeyRegistryV2.getOprfPublicKey(oprfKeyId);
+        BabyJubJub.Affine memory oprfKeyV2 = oprfKeyRegistryV2.getOprfPublicKey(oprfKeyId);
         assertEq(oprfKeyV2.x, Contributions.SHOULD_OPRF_PUBLIC_KEY_X);
         assertEq(oprfKeyV2.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
 
@@ -253,7 +251,7 @@ contract OprfKeyRegistryUpgradeTest is Test {
         vm.stopPrank();
 
         // check that the computed nullifier is correct
-        Types.BabyJubJubElement memory oprfKeyNew = oprfKeyRegistry.getOprfPublicKey(newOprfKeyId);
+        BabyJubJub.Affine memory oprfKeyNew = oprfKeyRegistry.getOprfPublicKey(newOprfKeyId);
         assertEq(oprfKeyNew.x, Contributions.SHOULD_OPRF_PUBLIC_KEY_X);
         assertEq(oprfKeyNew.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
     }
