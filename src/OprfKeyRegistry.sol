@@ -228,7 +228,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             revert AlreadySubmitted();
         }
 
-        st.initKeyGen(numPeers, peerAddresses);
+        st.initKeyGen(numPeers);
         // Emit Round1 event for everyone
         emit OprfKeyGen.SecretGenRound1(oprfKeyId, threshold);
     }
@@ -257,7 +257,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (oprfPublicKey.key.isEmpty()) revert UnknownId(oprfKeyId);
 
         // we need to leave the share commitments to check the peers are using the correct input
-        st.initReshare(numPeers, peerAddresses, oprfPublicKey.epoch + 1);
+        st.initReshare(numPeers, oprfPublicKey.epoch + 1);
         // Emit Round1 event for everyone
         emit OprfKeyGen.ReshareRound1(oprfKeyId, threshold, st.generatedEpoch);
     }
