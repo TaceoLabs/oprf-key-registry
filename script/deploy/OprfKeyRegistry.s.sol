@@ -36,6 +36,6 @@ contract DeployOprfKeyRegistryScript is Script {
 
         vm.stopBroadcast();
         console.log("OprfKeyRegistry implementation deployed to:", address(implementation));
-        console.log("OprfKeyRegistry deployed to:", address(oprfKeyRegistry));
+        console.log("OprfKeyRegistry proxy deployed to:", address(oprfKeyRegistry));
     }
 }
