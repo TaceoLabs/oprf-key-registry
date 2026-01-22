@@ -123,16 +123,19 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     }
 
     /// @notice Initializer function to set up the OprfKeyRegistry contract, this is not a constructor due to the use of upgradeable proxies.
+    /// @param _owner The address of the contract owner, passed explicitly in initialize.
     /// @param _keygenAdmin The address of the key generation administrator, only party that is allowed to start key generation processes.
     /// @param _keyGenVerifierAddress The address of the Groth16 verifier contract for key generation (needs to be compatible with threshold numPeers values).
     /// @param _threshold The threshold number of peers required for key generation.
     /// @param _numPeers The number of peers participating in the key generation.
-    function initialize(address _keygenAdmin, address _keyGenVerifierAddress, uint16 _threshold, uint16 _numPeers)
-        public
-        virtual
-        initializer
-    {
-        __Ownable_init(msg.sender);
+    function initialize(
+        address _owner,
+        address _keygenAdmin,
+        address _keyGenVerifierAddress,
+        uint16 _threshold,
+        uint16 _numPeers
+    ) public virtual initializer {
+        __Ownable_init(_owner);
         __Ownable2Step_init();
         keygenAdmins[_keygenAdmin] = true;
         amountKeygenAdmins += 1;

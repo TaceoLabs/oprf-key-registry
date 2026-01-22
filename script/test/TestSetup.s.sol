@@ -34,6 +34,7 @@ contract TestSetupScript is Script {
         uint256 numPeers = vm.envUint("NUM_PEERS");
         address keyGenVerifierAddress = deployGroth16VerifierKeyGen(threshold, numPeers);
         address taceoAdminAddress = vm.envAddress("TACEO_ADMIN_ADDRESS");
+        address owner = msg.sender;
 
         address[] memory participants = vm.envAddress("PARTICIPANT_ADDRESSES", ",");
         for (uint256 i = 0; i < participants.length; i++) {
@@ -44,7 +45,7 @@ contract TestSetupScript is Script {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdminAddress, keyGenVerifierAddress, threshold, numPeers
+            OprfKeyRegistry.initialize.selector, owner, taceoAdminAddress, keyGenVerifierAddress, threshold, numPeers
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);

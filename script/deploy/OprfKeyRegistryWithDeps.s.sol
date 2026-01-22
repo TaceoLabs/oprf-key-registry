@@ -30,6 +30,7 @@ contract DeployOprfKeyRegistryWithDepsScript is Script {
     function run() public {
         vm.startBroadcast();
 
+        address owner = msg.sender;
         address taceoAdminAddress = vm.envAddress("TACEO_ADMIN_ADDRESS");
         uint256 threshold = vm.envUint("THRESHOLD");
         uint256 numPeers = vm.envUint("NUM_PEERS");
@@ -39,7 +40,7 @@ contract DeployOprfKeyRegistryWithDepsScript is Script {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdminAddress, keyGenVerifierAddress, threshold, numPeers
+            OprfKeyRegistry.initialize.selector, owner, taceoAdminAddress, keyGenVerifierAddress, threshold, numPeers
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);

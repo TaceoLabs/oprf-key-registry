@@ -49,7 +49,7 @@ contract OprfKeyRegistryUpgradeTest is Test {
     address bob = address(0x2);
     address carol = address(0x3);
     address taceoAdmin = address(0x4);
-    address initOwner = 0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496;
+    address initOwner = 0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496; // the default addr of this test contract
 
     function setUp() public {
         verifierKeyGen = new VerifierKeyGen13();
@@ -57,7 +57,7 @@ contract OprfKeyRegistryUpgradeTest is Test {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);
@@ -256,4 +256,3 @@ contract OprfKeyRegistryUpgradeTest is Test {
         assertEq(oprfKeyNew.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
     }
 }
-
