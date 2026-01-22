@@ -9,8 +9,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 uint256 constant PUBLIC_INPUT_LENGTH_KEYGEN_13 = 24;
 uint256 constant PUBLIC_INPUT_LENGTH_KEYGEN_25 = 36;
-uint256 constant PUBLIC_INPUT_LENGTH_NULLIFIER = 13;
-uint256 constant AUTHENTICATOR_MERKLE_TREE_DEPTH = 30;
 
 interface IVerifierKeyGen13 {
     function verifyCompressedProof(
