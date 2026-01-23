@@ -70,7 +70,7 @@ library OprfKeyGen {
     }
 
     // Event that will be emitted during transaction of key-gens. This should signal the MPC-nodes that their transaction was successfully registered.
-    event KeyGenConfirmation(uint160 indexed oprfKeyId, uint16 partyId, uint8 round, uint128 epoch);
+    event KeyGenConfirmation(uint160 indexed oprfKeyId, uint16 indexed partyId, uint8 round, uint128 epoch);
     // events for key-gen
     event SecretGenRound1(uint160 indexed oprfKeyId, uint256 threshold);
     event SecretGenRound2(uint160 indexed oprfKeyId, uint128 indexed epoch);
