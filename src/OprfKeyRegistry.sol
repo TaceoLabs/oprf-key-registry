@@ -27,7 +27,12 @@ interface IVerifierKeyGen25 {
 }
 
 interface IOprfKeyRegistry {
+    function abortKeyGen(uint160 oprfKeyId) external;
+    function addKeyGenAdmin(address _keygenAdmin) external;
+    function deleteOprfPublicKey(uint160 oprfKeyId) external;
     function initKeyGen(uint160 oprfKeyId) external;
+    function initReshare(uint160 oprfKeyId) external;
+    function revokeKeyGenAdmin(address _keygenAdmin) external;
 }
 
 contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
