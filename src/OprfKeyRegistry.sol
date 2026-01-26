@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Types} from "./Types.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {BabyJubJub} from "./BabyJubJub.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OprfKeyGen} from "./OprfKeyGen.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 uint256 constant PUBLIC_INPUT_LENGTH_KEYGEN_13 = 24;
 uint256 constant PUBLIC_INPUT_LENGTH_KEYGEN_25 = 36;
-uint256 constant PUBLIC_INPUT_LENGTH_NULLIFIER = 13;
-uint256 constant AUTHENTICATOR_MERKLE_TREE_DEPTH = 30;
 
 interface IVerifierKeyGen13 {
     function verifyCompressedProof(
@@ -25,27 +24,16 @@ interface IVerifierKeyGen25 {
     ) external view;
 }
 
-interface IBabyJubJub {
-    function add(uint256 x1, uint256 y1, uint256 x2, uint256 y2) external view returns (uint256 x3, uint256 y3);
-    function isOnCurve(uint256 x, uint256 y) external pure returns (bool);
-    function isInCorrectSubgroupAssumingOnCurve(uint256 x, uint256 y) external pure returns (bool);
-    function computeLagrangeCoefficiants(uint256[] memory ids, uint256 threshold, uint256 numPeers)
-        external
-        pure
-        returns (uint256[] memory coeffs);
-    function scalarMul(uint256 scalar, uint256 x, uint256 y) external pure returns (uint256 x_res, uint256 y_res);
-}
-
 interface IOprfKeyRegistry {
     function initKeyGen(uint160 oprfKeyId) external;
 }
 
 contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
-    using Types for Types.BabyJubJubElement;
-    using Types for Types.Groth16Proof;
-    using Types for Types.OprfPeer;
-    using Types for Types.Round1Contribution;
-    using Types for Types.OprfKeyGenState;
+    using BabyJubJub for BabyJubJub.Affine;
+    using OprfKeyGen for OprfKeyGen.OprfKeyGenState;
+    using OprfKeyGen for OprfKeyGen.OprfPeer;
+    using OprfKeyGen for OprfKeyGen.Round1Contribution;
+
     // Gets set to ready state once OPRF participants are registered
 
     bool public isContractReady;
@@ -55,20 +43,19 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     uint256 public amountKeygenAdmins;
 
     address public keyGenVerifier;
-    IBabyJubJub public accumulator;
-    uint256 public threshold;
-    uint256 public numPeers;
+    uint16 public threshold;
+    uint16 public numPeers;
 
     // The addresses of the currently participating peers.
     address[] public peerAddresses;
     // Maps the address of a peer to its party id.
-    mapping(address => Types.OprfPeer) addressToPeer;
+    mapping(address => OprfKeyGen.OprfPeer) addressToPeer;
 
     // The keygen/reshare states for all OPRF key identifiers.
-    mapping(uint160 => Types.OprfKeyGenState) internal runningKeyGens;
+    mapping(uint160 => OprfKeyGen.OprfKeyGenState) internal runningKeyGens;
 
     // Mapping between each OPRF key identifier and the corresponding OPRF public-key.
-    mapping(uint160 => Types.RegisteredOprfPublicKey) internal oprfKeyRegistry;
+    mapping(uint160 => OprfKeyGen.RegisteredOprfPublicKey) internal oprfKeyRegistry;
 
     // =============================================
     //                MODIFIERS
@@ -102,6 +89,16 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
+    modifier adminOrOwner() {
+        _adminOrOwner();
+        _;
+    }
+
+    function _adminOrOwner() internal view {
+        bool isAdmin = keygenAdmins[msg.sender];
+        bool isOwner = owner() == msg.sender;
+        if (!isAdmin && !isOwner) revert OnlyAdmin();
+    }
     // =============================================
     //                Errors
     // =============================================
@@ -114,12 +111,11 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     error NotAProducer();
     error NotReady();
     error OnlyAdmin();
-    error OutdatedNullifier();
     error PartiesNotDistinct();
     error UnexpectedAmountPeers(uint256 expectedParties);
     error UnknownId(uint160 id);
     error UnsupportedNumPeersThreshold();
-    error WrongRound();
+    error WrongRound(OprfKeyGen.Round);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -127,25 +123,23 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     }
 
     /// @notice Initializer function to set up the OprfKeyRegistry contract, this is not a constructor due to the use of upgradeable proxies.
+    /// @param _owner The address of the contract owner, passed explicitly in initialize.
     /// @param _keygenAdmin The address of the key generation administrator, only party that is allowed to start key generation processes.
     /// @param _keyGenVerifierAddress The address of the Groth16 verifier contract for key generation (needs to be compatible with threshold numPeers values).
-    /// @param _accumulatorAddress The address of the BabyJubJub accumulator contract.
     /// @param _threshold The threshold number of peers required for key generation.
     /// @param _numPeers The number of peers participating in the key generation.
     function initialize(
+        address _owner,
         address _keygenAdmin,
         address _keyGenVerifierAddress,
-        address _accumulatorAddress,
-        uint256 _threshold,
-        uint256 _numPeers
+        uint16 _threshold,
+        uint16 _numPeers
     ) public virtual initializer {
-        __Ownable_init(msg.sender);
+        __Ownable_init(_owner);
         __Ownable2Step_init();
-        require(_numPeers < 1 << 16, "only supports party size up to 2^16");
         keygenAdmins[_keygenAdmin] = true;
         amountKeygenAdmins += 1;
         keyGenVerifier = _keyGenVerifierAddress;
-        accumulator = IBabyJubJub(_accumulatorAddress);
         threshold = _threshold;
         numPeers = _numPeers;
         isContractReady = false;
@@ -155,10 +149,15 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     //         ADMIN FUNCTIONS
     // ==================================
 
-    /// @notice Revokes the access of an admin (in case of key-loss or similar). In the long run we still want that this function is only callable with a threshold authentication, but for now we stick with admins being able to call this (this of course means one admin can block all others).
-    //
-    /// @param _keygenAdmin The admin address we want to revoke
-    function revokeKeyGenAdmin(address _keygenAdmin) external virtual onlyProxy onlyInitialized onlyAdmin {
+    /// @notice Revokes an admin's key-generation permissions.
+    ///
+    /// @dev This function is intended as an emergency measure (e.g. key loss).
+    /// In the future, revocation should require threshold authentication.
+    /// Currently, any admin may revoke another admin, meaning a single admin
+    /// can remove all others except the last remaining one.
+    ///
+    /// @param _keygenAdmin The admin address to revoke
+    function revokeKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized onlyAdmin {
         // if the _keygenAdmin is an admin, we remove them
         if (keygenAdmins[_keygenAdmin]) {
             if (amountKeygenAdmins == 1) {
@@ -167,25 +166,35 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             }
             delete keygenAdmins[_keygenAdmin];
             amountKeygenAdmins -= 1;
-            emit Types.KeyGenAdminRevoked(_keygenAdmin);
+            emit OprfKeyGen.KeyGenAdminRevoked(_keygenAdmin);
         }
     }
 
-    /// @notice Adds another admin address that is allowed to init/stop key-generations. In the long run we still want that this function is only callable with a threshold authentication, but for now we stick with admins being able to call this.
-    /// @param _keygenAdmin The admin address we want to revoke
-    function addKeyGenAdmin(address _keygenAdmin) external virtual onlyProxy onlyInitialized onlyAdmin {
+    /// @notice Grants key-generation admin permissions to an address.
+    ///
+    /// @dev In the future, adding admins should require threshold authentication.
+    /// Currently, any existing admin may add another admin.
+    ///
+    /// @param _keygenAdmin The admin address to register
+    function addKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized adminOrOwner {
         // if the _keygenAdmin is not yet an admin, we add them
         if (!keygenAdmins[_keygenAdmin]) {
             keygenAdmins[_keygenAdmin] = true;
             amountKeygenAdmins += 1;
-            emit Types.KeyGenAdminRegistered(_keygenAdmin);
+            emit OprfKeyGen.KeyGenAdminRegistered(_keygenAdmin);
         }
     }
 
-    /// @notice Registers the OPRF peers with their addresses and public keys. Only callable by the contract owner.
-    // IMPORTANT: IF RE-REGISTERING, THE EXISTING PEERS NEED TO KEEP THEIR PARTY ID
-    /// @param _peerAddresses An array of addresses of the OPRF peers.
-    function registerOprfPeers(address[] calldata _peerAddresses) external virtual onlyProxy onlyInitialized onlyOwner {
+    /// @notice Registers the OPRF peers with their addresses and assigns party IDs.
+    /// Can only be called by the contract owner. Re-registering requires that
+    /// existing peers keep their party ID.
+    ///
+    /// @dev Ensures the number of addresses matches `numPeers` and that all addresses are distinct.
+    /// Deletes any previous peer registrations and initializes the new ones. Sets
+    /// `isContractReady` to true once registration completes.
+    ///
+    /// @param _peerAddresses An array of OPRF peer addresses to register.
+    function registerOprfPeers(address[] calldata _peerAddresses) public virtual onlyProxy onlyInitialized onlyOwner {
         if (_peerAddresses.length != numPeers) revert UnexpectedAmountPeers(numPeers);
         // check that addresses are distinct
         for (uint256 i = 0; i < _peerAddresses.length; ++i) {
@@ -201,103 +210,109 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
         // set the new ones
         for (uint16 i = 0; i < _peerAddresses.length; i++) {
-            addressToPeer[_peerAddresses[i]] = Types.OprfPeer({isParticipant: true, partyId: i});
+            addressToPeer[_peerAddresses[i]] = OprfKeyGen.OprfPeer({isParticipant: true, partyId: i});
         }
         peerAddresses = _peerAddresses;
         isContractReady = true;
     }
 
-    /// @notice Initializes the key generation process. Tries to use the provided oprfKeyId as identifier. If the identifier is already taken, reverts the transaction.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    function initKeyGen(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
+    /// @notice Initializes a new key-generation process with the given OPRF key ID.
+    /// Reverts if the identifier is zero, already used, or deleted.
+    ///
+    /// @dev Uses the provided `oprfKeyId` as the unique identifier. Checks storage
+    /// to prevent resubmission or re-initialization. Emits the Round1 event upon success.
+    ///
+    /// @param oprfKeyId The unique identifier for the OPRF public key.
+    function initKeyGen(uint160 oprfKeyId) public virtual onlyProxy isReady onlyAdmin {
+        if (oprfKeyId == 0) revert BadContribution();
         // Check that this oprfKeyId was not used already
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        if (st.exists) revert AlreadySubmitted();
-        st.generatedEpoch = 0;
-        st.round1 = new Types.Round1Contribution[](numPeers);
-        st.round2 = new Types.SecretGenCiphertext[][](numPeers);
-        for (uint256 i = 0; i < numPeers; i++) {
-            st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
-        }
-        st.shareCommitments = new Types.BabyJubJubElement[](numPeers);
-        st.round2Done = new bool[](numPeers);
-        st.round3Done = new bool[](numPeers);
-        st.exists = true;
+        BabyJubJub.Affine storage publicKey = oprfKeyRegistry[oprfKeyId].key;
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
 
+        // check if deleted
+        if (st.currentRound == OprfKeyGen.Round.DELETED) revert DeletedId(oprfKeyId);
+
+        // check if resubmit
+        if (!publicKey.isEmpty() || st.currentRound != OprfKeyGen.Round.NOT_STARTED) {
+            revert AlreadySubmitted();
+        }
+
+        st.initKeyGen(numPeers);
         // Emit Round1 event for everyone
-        emit Types.SecretGenRound1(oprfKeyId, threshold);
+        emit OprfKeyGen.SecretGenRound1(oprfKeyId, threshold);
     }
 
-    /// @notice Initializes the reshare process for a given oprfKeyId. This method might either be used to re-randomize the shares of the MPC-nodes, switch out parties or regenerate the shares if one loses access to their shares.
-    /// This method reuses the state from the last key-gen/re-share and deletes all old information.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    function initReshare(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
-        // Check that this oprfKeyId already exists
-        Types.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
-        if (_isEmpty(oprfPublicKey.key)) revert UnknownId(oprfKeyId);
+    /// @notice Initializes a reshare process for a given OPRF key ID.
+    /// Can be used to re-randomize MPC shares, replace parties, or regenerate shares
+    /// if a node loses access. Reuses the previous state but clears old key-generation data.
+    ///
+    /// @dev Checks that the key ID exists and is not deleted. Prevents resubmission if
+    /// the reshare is already started. Initializes the reshare state and increments the epoch.
+    /// Emits the Round1 event upon success.
+    ///
+    /// @param oprfKeyId The unique identifier for the OPRF public key.
+    function initReshare(uint160 oprfKeyId) public virtual onlyProxy isReady onlyAdmin {
         // Get the key-gen state for this key and reset everything
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        // we need to leave the share commitments to check the peers are using the correct input
-        delete st.lagrangeCoeffs;
-        delete st.numProducers;
-        delete st.round2Done;
-        delete st.round3Done;
-        delete st.round2EventEmitted;
-        delete st.round3EventEmitted;
-        delete st.finalizeEventEmitted;
-        st.lagrangeCoeffs = new uint256[](threshold);
-        st.round1 = new Types.Round1Contribution[](numPeers);
-        st.round2 = new Types.SecretGenCiphertext[][](numPeers);
-        for (uint256 i = 0; i < numPeers; i++) {
-            delete st.nodeRoles[peerAddresses[i]];
-            st.round2[i] = new Types.SecretGenCiphertext[](numPeers);
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        // check if deleted
+        if (st.currentRound == OprfKeyGen.Round.DELETED) revert DeletedId(oprfKeyId);
+        // check if resubmit
+        if (st.currentRound != OprfKeyGen.Round.NOT_STARTED) {
+            revert AlreadySubmitted();
         }
-        st.round2Done = new bool[](numPeers);
-        st.round3Done = new bool[](numPeers);
-        st.generatedEpoch = oprfPublicKey.epoch + 1;
 
+        // Check that this oprfKeyId already exists
+        OprfKeyGen.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
+        if (oprfPublicKey.key.isEmpty()) revert UnknownId(oprfKeyId);
+
+        // we need to leave the share commitments to check the peers are using the correct input
+        st.initReshare(numPeers, oprfPublicKey.epoch + 1);
         // Emit Round1 event for everyone
-        emit Types.ReshareRound1(oprfKeyId, threshold, st.generatedEpoch);
+        emit OprfKeyGen.ReshareRound1(oprfKeyId, threshold, st.generatedEpoch);
     }
 
-    /// @notice Deletes the OPRF public-key and its associated material. Works during key-gen or afterwards.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    function deleteOprfPublicKey(uint160 oprfKeyId) external virtual onlyProxy isReady onlyAdmin {
-        // try to delete the runningKeyGen data
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        bool needToEmitEvent = false;
-        if (st.exists) {
-            // delete all the material and set to deleted
-            for (uint256 i = 0; i < numPeers; ++i) {
-                delete st.nodeRoles[peerAddresses[i]];
-            }
-            delete st.lagrangeCoeffs;
-            delete st.round1;
-            delete st.round2;
-            delete st.shareCommitments;
-            delete st.keyAggregate;
-            delete st.numProducers;
-            delete st.round2Done;
-            delete st.round3Done;
-            delete st.round2EventEmitted;
-            delete st.round3EventEmitted;
-            delete st.finalizeEventEmitted;
-            // mark the key-gen as deleted
-            // we need this to prevent race conditions during the key-gen
-            st.deleted = true;
-            needToEmitEvent = true;
+    /// @notice Deletes an OPRF public key and all associated state.
+    /// Can only delete keys that exist and are not currently in a key-generation or reshare process.
+    /// If a process is stuck, call `abortKeyGen` first before deleting.
+    ///
+    /// @dev Clears both the registered public key and the running key-gen state.
+    /// Emits `KeyDeletion` upon success.
+    ///
+    /// @param oprfKeyId The unique identifier for the OPRF public key.
+    function deleteOprfPublicKey(uint160 oprfKeyId) public virtual onlyProxy isReady onlyAdmin {
+        // check whether this key was registered
+        OprfKeyGen.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        if (st.currentRound != OprfKeyGen.Round.NOT_STARTED) {
+            revert WrongRound(st.currentRound);
         }
-
-        Types.RegisteredOprfPublicKey memory oprfPublicKey = oprfKeyRegistry[oprfKeyId];
-        if (!_isEmpty(oprfPublicKey.key)) {
+        if (!oprfPublicKey.key.isEmpty()) {
             // delete the created key
-            delete oprfPublicKey;
-            needToEmitEvent = true;
-        }
+            delete oprfPublicKey.key;
+            delete oprfPublicKey.epoch;
 
-        if (needToEmitEvent) {
-            emit Types.KeyDeletion(oprfKeyId);
+            // delete the runningKeyGen data as well
+            st.deleteSt(numPeers, peerAddresses);
+            emit OprfKeyGen.KeyDeletion(oprfKeyId);
+        } else {
+            revert UnknownId(oprfKeyId);
         }
+    }
+
+    /// @notice Aborts an in-progress OPRF key-generation or reshare process.
+    /// Call `initKeyGen` or `initReshare` afterwards to restart the process if needed.
+    ///
+    /// @dev Resets the key-gen state to allow for a fresh start. Emits `KeyGenAbort`.
+    ///
+    /// @param oprfKeyId The unique identifier for the OPRF public key.
+    function abortKeyGen(uint160 oprfKeyId) public virtual onlyProxy isReady onlyAdmin {
+        // Get the key-gen state for this key and check that it actually exists
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        if (st.currentRound == OprfKeyGen.Round.NOT_STARTED) {
+            revert UnknownId(oprfKeyId);
+        }
+        st.reset(numPeers, peerAddresses);
+        emit OprfKeyGen.KeyGenAbort(oprfKeyId);
     }
 
     // ==================================
@@ -306,9 +321,9 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
     /// @notice Adds a Round 1 contribution to the key generation process. Only callable by registered OPRF peers.
     /// @param oprfKeyId The unique identifier for the key-gen.
-    /// @param data The Round 1 contribution data. See `Types.Round1Contribution` for details.
-    function addRound1KeyGenContribution(uint160 oprfKeyId, Types.Round1Contribution calldata data)
-        external
+    /// @param data The Round 1 contribution data. See `OprfKeyGen.Round1Contribution` for details.
+    function addRound1KeyGenContribution(uint160 oprfKeyId, OprfKeyGen.Round1Contribution calldata data)
+        public
         virtual
         onlyProxy
         isReady
@@ -318,28 +333,28 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // for key-gen everyone is a producer, therefore we check that all values are set and valid points
         _curveChecks(data.commShare);
         if (data.commCoeffs == 0) revert BadContribution();
-        Types.OprfKeyGenState storage st = _addRound1Contribution(oprfKeyId, partyId, data);
+        OprfKeyGen.OprfKeyGenState storage st = _addRound1Contribution(oprfKeyId, partyId, data);
         // check that this is a key-gen
         if (st.generatedEpoch != 0) {
             revert BadContribution();
         }
-        st.nodeRoles[msg.sender] = Types.KeyGenRole.PRODUCER;
+        st.nodeRoles[msg.sender] = OprfKeyGen.KeyGenRole.PRODUCER;
         st.numProducers += 1;
         // Add BabyJubJub Elements together and keep running total
-        _addToAggregate(st.keyAggregate, data.commShare.x, data.commShare.y);
+        _addToAggregate(st.keyAggregate, data.commShare);
         // everyone is a producer therefore we wait for numPeers amount producers
         _tryEmitRound2Event(oprfKeyId, numPeers, st);
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
     }
 
     /// @notice Adds a Round 1 contribution to the re-sharing process. Only callable by registered OPRF peers. This method does some more work than the basic key-gen.
     /// We need threshold many PRODUCERS, meaning those will do the re-sharing. Nevertheless, all other parties need to participate as CONSUMERS and provide an ephemeral public-key so that the producers can create the new shares for them, so at least round 1 needs contributions by all nodes.
     ///
     /// @param oprfKeyId The unique identifier for the key-gen.
-    /// @param data The Round 1 contribution data. See `Types.Round1Contribution` for details.
-    function addRound1ReshareContribution(uint160 oprfKeyId, Types.Round1Contribution calldata data)
-        external
+    /// @param data The Round 1 contribution data. See `OprfKeyGen.Round1Contribution` for details.
+    function addRound1ReshareContribution(uint160 oprfKeyId, OprfKeyGen.Round1Contribution calldata data)
+        public
         virtual
         onlyProxy
         isReady
@@ -348,17 +363,17 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // return the partyId if sender is really a participant
         uint16 partyId = _internParticipantCheck();
         // in reshare we can have producers and consumers, therefore we don't need to enforce that commitments are non-zero
-        Types.OprfKeyGenState storage st = _addRound1Contribution(oprfKeyId, partyId, data);
+        OprfKeyGen.OprfKeyGenState storage st = _addRound1Contribution(oprfKeyId, partyId, data);
         // check that this is in fact a reshare
         if (st.generatedEpoch == 0) {
             revert BadContribution();
         }
         // check if someone wants to be a consumer
-        bool isEmptyCommShare = _isEmpty(data.commShare);
+        bool isEmptyCommShare = data.commShare.isEmpty();
         bool isEmptyCommCoeffs = data.commCoeffs == 0;
         if ((isEmptyCommShare && isEmptyCommCoeffs) || st.numProducers >= threshold) {
             // both are empty or we already have enough producers
-            st.nodeRoles[msg.sender] = Types.KeyGenRole.CONSUMER;
+            st.nodeRoles[msg.sender] = OprfKeyGen.KeyGenRole.CONSUMER;
             // as a consolation prize we at least refund some storage costs
             delete st.round1[partyId].commShare;
             delete st.round1[partyId].commCoeffs;
@@ -369,11 +384,11 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             // both commitments are set and we still need more producers
             _curveChecks(data.commShare);
             // in contrast to key-gen we don't compute the running total, but we can check whether the commitments are correct from the previous reshare/key-gen.
-            Types.BabyJubJubElement memory shouldCommitment = st.shareCommitments[partyId];
-            if (!_isEqual(shouldCommitment, data.commShare)) {
+            BabyJubJub.Affine memory shouldCommitment = st.prevShareCommitments[partyId];
+            if (!BabyJubJub.isEqual(shouldCommitment, data.commShare)) {
                 revert BadContribution();
             }
-            st.nodeRoles[msg.sender] = Types.KeyGenRole.PRODUCER;
+            st.nodeRoles[msg.sender] = OprfKeyGen.KeyGenRole.PRODUCER;
             st.numProducers += 1;
             // check if we are the last producer, then we can compute the lagrange coefficients
             if (st.numProducers == threshold) {
@@ -383,27 +398,27 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
                 uint256 counter = 0;
                 for (uint256 i = 0; i < numPeers; ++i) {
                     address peerAddress = peerAddresses[i];
-                    if (Types.KeyGenRole.PRODUCER == st.nodeRoles[peerAddress]) {
+                    if (OprfKeyGen.KeyGenRole.PRODUCER == st.nodeRoles[peerAddress]) {
                         ids[counter++] = addressToPeer[peerAddress].partyId;
                     }
                 }
                 // then compute the coefficients
-                st.lagrangeCoeffs = accumulator.computeLagrangeCoefficiants(ids, threshold, numPeers);
+                st.lagrangeCoeffs = BabyJubJub.computeLagrangeCoefficiants(ids, threshold, numPeers);
             }
         }
         // we need a contribution from everyone but only threshold many producers. If we don't manage to find enough producers, we will emit an event so that the admin can intervene.
         _tryEmitRound2Event(oprfKeyId, threshold, st);
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
     }
 
     /// @notice Adds a Round 2 contribution to the key generation process. Only callable by registered OPRF peers. Is the same for key-gen and reshare, with the small difference with how the commitments for next reshare are computed and that we need less producers for reshare.
     ///
     /// @param oprfKeyId The unique identifier for the key-gen.
-    /// @param data The Round 2 contribution data. See `Types.Round2Contribution` for details.
+    /// @param data The Round 2 contribution data. See `OprfKeyGen.Round2Contribution` for details.
     /// @dev This internally verifies the Groth16 proof provided in the contribution data to ensure it is constructed correctly.
-    function addRound2Contribution(uint160 oprfKeyId, Types.Round2Contribution calldata data)
-        external
+    function addRound2Contribution(uint160 oprfKeyId, OprfKeyGen.Round2Contribution calldata data)
+        public
         virtual
         onlyProxy
         isReady
@@ -411,18 +426,16 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check that the contribution is complete
         if (data.ciphers.length != numPeers) revert BadContribution();
         // check that we started the key-gen for this OPRF public-key.
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        if (!st.exists) revert UnknownId(oprfKeyId);
-        // check if the OPRF public-key was deleted in the meantime
-        if (st.deleted) revert DeletedId(oprfKeyId);
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that we are actually in round2
-        if (!st.round2EventEmitted || st.round3EventEmitted) revert WrongRound();
+        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
+
         // return the partyId if sender is really a participant
         uint16 partyId = _internParticipantCheck();
         // check that this peer did not submit anything for this round
         if (st.round2Done[partyId]) revert AlreadySubmitted();
         // check that this peer is a producer for this round
-        if (Types.KeyGenRole.PRODUCER != st.nodeRoles[msg.sender]) revert BadContribution();
+        if (OprfKeyGen.KeyGenRole.PRODUCER != st.nodeRoles[msg.sender]) revert BadContribution();
 
         // everything looks good - push the ciphertexts
         // additionally accumulate all commitments for the parties to have the correct commitment during the reshare process.
@@ -432,7 +445,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             // for the key-gen we simply accumulate all commitments as the resulting shamir-share should have contributions from all parties -> just add all together
             for (uint256 i = 0; i < numPeers; ++i) {
                 _curveChecks(data.ciphers[i].commitment);
-                _addToAggregate(st.shareCommitments[i], data.ciphers[i].commitment.x, data.ciphers[i].commitment.y);
+                _addToAggregate(st.shareCommitments[i], data.ciphers[i].commitment);
                 st.round2[i][partyId] = data.ciphers[i];
             }
         } else {
@@ -441,18 +454,13 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             require(lagrange > 0, "SAFETY CHECK: this should never happen. This means there is a bug");
             for (uint256 i = 0; i < numPeers; ++i) {
                 _curveChecks(data.ciphers[i].commitment);
-                (uint256 x, uint256 y) =
-                    accumulator.scalarMul(lagrange, data.ciphers[i].commitment.x, data.ciphers[i].commitment.y);
-                _addToAggregate(st.shareCommitments[i], x, y);
+                BabyJubJub.Affine memory lagrangeResult = BabyJubJub.scalarMul(lagrange, data.ciphers[i].commitment);
+                _addToAggregate(st.shareCommitments[i], lagrangeResult);
                 st.round2[i][partyId] = data.ciphers[i];
             }
         }
         // set the contribution to done
         st.round2Done[partyId] = true;
-
-        // depending on key-gen or reshare a different amount of producers
-        uint256 necessaryContributions = st.generatedEpoch == 0 ? numPeers : threshold;
-        _tryEmitRound3Event(oprfKeyId, necessaryContributions, st);
 
         // last step verify the proof and potentially revert if proof fails
 
@@ -472,7 +480,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
             uint256[PUBLIC_INPUT_LENGTH_KEYGEN_13] memory publicInputs;
 
-            Types.BabyJubJubElement[] memory pubKeyList = _loadPeerPublicKeys(st);
+            BabyJubJub.Affine[] memory pubKeyList = _loadPeerPublicKeys(st);
             publicInputs[0] = pubKeyList[partyId].x;
             publicInputs[1] = pubKeyList[partyId].y;
             publicInputs[2] = st.round1[partyId].commShare.x;
@@ -495,7 +503,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
             uint256[PUBLIC_INPUT_LENGTH_KEYGEN_25] memory publicInputs;
 
-            Types.BabyJubJubElement[] memory pubKeyList = _loadPeerPublicKeys(st);
+            BabyJubJub.Affine[] memory pubKeyList = _loadPeerPublicKeys(st);
             publicInputs[0] = pubKeyList[partyId].x;
             publicInputs[1] = pubKeyList[partyId].y;
             publicInputs[2] = st.round1[partyId].commShare.x;
@@ -516,22 +524,23 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         } else {
             revert UnsupportedNumPeersThreshold();
         }
+        // depending on key-gen or reshare a different amount of producers
+        uint256 necessaryContributions = st.generatedEpoch == 0 ? numPeers : threshold;
+        _tryEmitRound3Event(oprfKeyId, necessaryContributions, st);
+
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 2, st.generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 2, st.generatedEpoch);
     }
 
     /// @notice Adds a Round 3 contribution to the key generation process. Only callable by registered OPRF peers. This is exactly the same process for key-gen and reshare because nodes just acknowledge that they received their ciphertexts.
     ///
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     /// @dev This does not require any calldata, as it is simply an acknowledgment from the peer that is is done.
-    function addRound3Contribution(uint160 oprfKeyId) external virtual onlyProxy isReady {
+    function addRound3Contribution(uint160 oprfKeyId) public virtual onlyProxy isReady {
         // check that we started the key-gen for this OPRF public-key.
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        if (!st.exists) revert UnknownId(oprfKeyId);
-        // check if the OPRF public-key was deleted in the meantime
-        if (st.deleted) revert DeletedId(oprfKeyId);
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that we are actually in round3
-        if (!st.round3EventEmitted || st.finalizeEventEmitted) revert NotReady();
+        if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
         // return the partyId if sender is really a participant
         uint16 partyId = _internParticipantCheck();
         // check that this peer did not submit anything for this round
@@ -544,27 +553,20 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (allRound3Submitted(st)) {
             // We are done! Register the OPRF public-key and emit event!
             if (st.generatedEpoch == 0) {
-                oprfKeyRegistry[oprfKeyId] = Types.RegisteredOprfPublicKey({key: st.keyAggregate, epoch: 0});
+                oprfKeyRegistry[oprfKeyId] = OprfKeyGen.RegisteredOprfPublicKey({key: st.keyAggregate, epoch: 0});
             } else {
                 // we simply increase the current epoch
                 oprfKeyRegistry[oprfKeyId].epoch = st.generatedEpoch;
             }
+            // Save the current share commitments for the next reshare
+            st.prevShareCommitments = st.shareCommitments;
 
-            emit Types.SecretGenFinalize(oprfKeyId, st.generatedEpoch);
+            emit OprfKeyGen.SecretGenFinalize(oprfKeyId, st.generatedEpoch);
             // cleanup all old data - we need to keep shareCommitments though otherwise we can't do reshares
-            delete st.lagrangeCoeffs;
-            delete st.round1;
-            delete st.round2;
-            delete st.keyAggregate;
-            delete st.numProducers;
-            delete st.generatedEpoch;
-            delete st.round2Done;
-            delete st.round3Done;
-            // we keep the eventsEmitted and exists to prevent participants to double submit
-            st.finalizeEventEmitted = true;
+            st.reset(numPeers, peerAddresses);
         }
         // Emit the transaction confirmation
-        emit Types.KeyGenConfirmation(oprfKeyId, partyId, 3, generatedEpoch);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 3, generatedEpoch);
     }
 
     // ==================================
@@ -573,14 +575,14 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
     /// @notice Checks if the caller is a registered OPRF participant and returns their party ID.
     /// @return The party ID of the given participant if they are a registered participant.
-    function getPartyIdForParticipant(address participant) external view virtual isReady onlyProxy returns (uint256) {
-        Types.OprfPeer memory peer = addressToPeer[participant];
+    function getPartyIdForParticipant(address participant) public view virtual isReady onlyProxy returns (uint256) {
+        OprfKeyGen.OprfPeer memory peer = addressToPeer[participant];
         if (!peer.isParticipant) revert NotAParticipant();
         return peer.partyId;
     }
 
     function _internParticipantCheck() internal view virtual returns (uint16) {
-        Types.OprfPeer memory peer = addressToPeer[msg.sender];
+        OprfKeyGen.OprfPeer memory peer = addressToPeer[msg.sender];
         if (!peer.isParticipant) revert NotAParticipant();
         return peer.partyId;
     }
@@ -589,26 +591,24 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     /// @return The ephemeral public keys generated in round 1 iff a producer. An empty array iff a consumer.
     function loadPeerPublicKeysForProducers(uint160 oprfKeyId)
-        external
+        public
         view
         virtual
         isReady
         onlyProxy
-        returns (Types.BabyJubJubElement[] memory)
+        returns (BabyJubJub.Affine[] memory)
     {
         // check if a participant
-        Types.OprfPeer memory peer = addressToPeer[msg.sender];
+        OprfKeyGen.OprfPeer memory peer = addressToPeer[msg.sender];
         if (!peer.isParticipant) revert NotAParticipant();
 
-        // check if there exists this key-gen
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        if (!st.exists) revert UnknownId(oprfKeyId);
-        // check if the key-gen was deleted
-        if (st.deleted) revert DeletedId(oprfKeyId);
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        // check if we are in correct round
+        if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
         // check if we are a producer
-        if (Types.KeyGenRole.PRODUCER != st.nodeRoles[msg.sender]) {
+        if (OprfKeyGen.KeyGenRole.PRODUCER != st.nodeRoles[msg.sender]) {
             // we are not a producer -> return empty array
-            return new Types.BabyJubJubElement[](0);
+            return new BabyJubJub.Affine[](0);
         }
         return _loadPeerPublicKeys(st);
     }
@@ -617,22 +617,21 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     /// @return The ephemeral public keys OF THE PRODUCERS generated in round 1
     function loadPeerPublicKeysForConsumers(uint160 oprfKeyId)
-        external
+        public
         view
         virtual
         isReady
         onlyProxy
-        returns (Types.BabyJubJubElement[] memory)
+        returns (BabyJubJub.Affine[] memory)
     {
         // check if a participant
-        Types.OprfPeer memory peer = addressToPeer[msg.sender];
+        OprfKeyGen.OprfPeer memory peer = addressToPeer[msg.sender];
         if (!peer.isParticipant) revert NotAParticipant();
 
         // check if there exists this key-gen
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        if (!st.exists) revert UnknownId(oprfKeyId);
-        // check if the key-gen was deleted
-        if (st.deleted) revert DeletedId(oprfKeyId);
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        // check if we are in correct round
+        if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
         // load the producer's keys for decryption
         return _loadProducerPeerPublicKeys(st);
     }
@@ -641,32 +640,29 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     /// @return An array of Round 2 ciphertexts belonging to the caller.
     function checkIsParticipantAndReturnRound2Ciphers(uint160 oprfKeyId)
-        external
+        public
         view
         virtual
         onlyProxy
         isReady
-        returns (Types.SecretGenCiphertext[] memory)
+        returns (OprfKeyGen.SecretGenCiphertext[] memory)
     {
         // check if a participant
-        Types.OprfPeer memory peer = addressToPeer[msg.sender];
+        OprfKeyGen.OprfPeer memory peer = addressToPeer[msg.sender];
         if (!peer.isParticipant) revert NotAParticipant();
         // check if there exists this a key-gen
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        if (!st.exists) revert UnknownId(oprfKeyId);
-        // check if the key-gen was deleted
-        if (st.deleted) revert DeletedId(oprfKeyId);
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that round2 ciphers are finished
-        if (!st.round2EventEmitted) revert NotReady();
+        if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
         if (st.generatedEpoch == 0) {
             // this is a key-gen so just send all ciphers
             return st.round2[peer.partyId];
         } else {
             // this is a reshare -> find the contributions by the producers
-            Types.SecretGenCiphertext[] memory ciphers = new Types.SecretGenCiphertext[](threshold);
+            OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](threshold);
             uint256 counter = 0;
             for (uint256 i = 0; i < numPeers; ++i) {
-                if (Types.KeyGenRole.PRODUCER == st.nodeRoles[peerAddresses[i]]) {
+                if (OprfKeyGen.KeyGenRole.PRODUCER == st.nodeRoles[peerAddresses[i]]) {
                     ciphers[counter++] = st.round2[peer.partyId][i];
                 }
             }
@@ -683,11 +679,14 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         virtual
         onlyProxy
         isReady
-        returns (Types.BabyJubJubElement memory)
+        returns (BabyJubJub.Affine memory)
     {
-        Types.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
-        if (_isEmpty(oprfPublicKey.key)) revert UnknownId(oprfKeyId);
-        return oprfPublicKey.key;
+        // check if deleted
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        if (st.currentRound == OprfKeyGen.Round.DELETED) revert DeletedId(oprfKeyId);
+        BabyJubJub.Affine storage publicKey = oprfKeyRegistry[oprfKeyId].key;
+        if (publicKey.isEmpty()) revert UnknownId(oprfKeyId);
+        return publicKey;
     }
 
     /// @notice Retrieves the specified OPRF public-key along with its current epoch.
@@ -699,23 +698,26 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         virtual
         onlyProxy
         isReady
-        returns (Types.RegisteredOprfPublicKey memory)
+        returns (OprfKeyGen.RegisteredOprfPublicKey memory)
     {
-        Types.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
-        if (_isEmpty(oprfPublicKey.key)) revert UnknownId(oprfKeyId);
+        // check if deleted
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        if (st.currentRound == OprfKeyGen.Round.DELETED) revert DeletedId(oprfKeyId);
+        OprfKeyGen.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
+        if (oprfPublicKey.key.isEmpty()) revert UnknownId(oprfKeyId);
         return oprfPublicKey;
     }
 
-    function allRound1Submitted(Types.OprfKeyGenState storage st) internal view virtual returns (bool) {
+    function allRound1Submitted(OprfKeyGen.OprfKeyGenState storage st) internal view virtual returns (bool) {
         for (uint256 i = 0; i < numPeers; ++i) {
-            if (Types.KeyGenRole.NOT_READY == st.nodeRoles[peerAddresses[i]]) {
+            if (OprfKeyGen.KeyGenRole.NOT_READY == st.nodeRoles[peerAddresses[i]]) {
                 return false;
             }
         }
         return true;
     }
 
-    function allProducersRound2Submitted(uint256 necessaryProducers, Types.OprfKeyGenState storage st)
+    function allProducersRound2Submitted(uint256 necessaryProducers, OprfKeyGen.OprfKeyGenState storage st)
         internal
         view
         virtual
@@ -728,129 +730,107 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         return submissions == necessaryProducers;
     }
 
-    function allRound3Submitted(Types.OprfKeyGenState storage st) internal view virtual returns (bool) {
+    function allRound3Submitted(OprfKeyGen.OprfKeyGenState storage st) internal view virtual returns (bool) {
         for (uint256 i = 0; i < numPeers; ++i) {
             if (!st.round3Done[i]) return false;
         }
         return true;
     }
 
-    function _addRound1Contribution(uint160 oprfKeyId, uint256 partyId, Types.Round1Contribution calldata data)
-        private
-        returns (Types.OprfKeyGenState storage)
+    function _addRound1Contribution(uint160 oprfKeyId, uint256 partyId, OprfKeyGen.Round1Contribution calldata data)
+        internal
+        returns (OprfKeyGen.OprfKeyGenState storage)
     {
         _curveChecks(data.ephPubKey);
         // check that we started the key-gen for this OPRF public-key
-        Types.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        if (!st.exists) revert UnknownId(oprfKeyId);
-        // check if the OPRF public-key was deleted in the meantime
-        if (st.deleted) revert DeletedId(oprfKeyId);
-        if (st.round2EventEmitted) revert WrongRound();
-
+        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
+        // check that we are in correct round
+        if (st.currentRound != OprfKeyGen.Round.ONE) revert WrongRound(st.currentRound);
         // check that we don't have double submission
-        if (!_isEmpty(st.round1[partyId].commShare)) revert AlreadySubmitted();
+        if (!st.round1[partyId].commShare.isEmpty()) revert AlreadySubmitted();
         st.round1[partyId] = data;
         return st;
     }
 
-    function _loadPeerPublicKeys(Types.OprfKeyGenState storage st)
+    function _loadPeerPublicKeys(OprfKeyGen.OprfKeyGenState storage st)
         internal
         view
-        returns (Types.BabyJubJubElement[] memory)
+        returns (BabyJubJub.Affine[] memory)
     {
-        if (!st.round2EventEmitted) revert WrongRound();
-        Types.BabyJubJubElement[] memory pubKeyList = new Types.BabyJubJubElement[](numPeers);
+        BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](numPeers);
         for (uint256 i = 0; i < numPeers; ++i) {
             pubKeyList[i] = st.round1[i].ephPubKey;
         }
         return pubKeyList;
     }
 
-    function _loadProducerPeerPublicKeys(Types.OprfKeyGenState storage st)
+    function _loadProducerPeerPublicKeys(OprfKeyGen.OprfKeyGenState storage st)
         internal
         view
-        returns (Types.BabyJubJubElement[] memory)
+        returns (BabyJubJub.Affine[] memory)
     {
-        if (!st.round2EventEmitted) revert WrongRound();
-        Types.BabyJubJubElement[] memory pubKeyList = new Types.BabyJubJubElement[](st.numProducers);
+        BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](st.numProducers);
         uint256 counter = 0;
         for (uint256 i = 0; i < numPeers; ++i) {
-            if (Types.KeyGenRole.PRODUCER == st.nodeRoles[peerAddresses[i]]) {
+            if (OprfKeyGen.KeyGenRole.PRODUCER == st.nodeRoles[peerAddresses[i]]) {
                 pubKeyList[counter++] = st.round1[i].ephPubKey;
             }
         }
         return pubKeyList;
     }
 
-    function _tryEmitRound2Event(uint160 oprfKeyId, uint256 necessaryContributions, Types.OprfKeyGenState storage st)
-        internal
-        virtual
-    {
-        if (st.round2EventEmitted) return;
+    function _tryEmitRound2Event(
+        uint160 oprfKeyId,
+        uint256 necessaryContributions,
+        OprfKeyGen.OprfKeyGenState storage st
+    ) internal virtual {
+        if (st.currentRound != OprfKeyGen.Round.ONE) return;
         if (!allRound1Submitted(st)) return;
         if (st.numProducers < necessaryContributions) {
-            emit Types.NotEnoughProducers(oprfKeyId);
-            st.round2EventEmitted = true;
+            // everyone contributed but we are don't have enough producers. This is an alert and we need to abort!
+            emit OprfKeyGen.NotEnoughProducers(oprfKeyId);
+            st.currentRound = OprfKeyGen.Round.STUCK;
+        } else {
+            st.currentRound = OprfKeyGen.Round.TWO;
+            st.shareCommitments = new BabyJubJub.Affine[](numPeers);
+            emit OprfKeyGen.SecretGenRound2(oprfKeyId, st.generatedEpoch);
         }
-
-        st.round2EventEmitted = true;
-        // delete the old commitments now
-        delete st.shareCommitments;
-        st.shareCommitments = new Types.BabyJubJubElement[](numPeers);
-        emit Types.SecretGenRound2(oprfKeyId, st.generatedEpoch);
     }
 
-    function _tryEmitRound3Event(uint160 oprfKeyId, uint256 necessaryContributions, Types.OprfKeyGenState storage st)
-        internal
-        virtual
-    {
-        if (st.round3EventEmitted) return;
+    function _tryEmitRound3Event(
+        uint160 oprfKeyId,
+        uint256 necessaryContributions,
+        OprfKeyGen.OprfKeyGenState storage st
+    ) internal virtual {
+        if (st.currentRound != OprfKeyGen.Round.TWO) return;
         if (!allProducersRound2Submitted(necessaryContributions, st)) return;
 
-        st.round3EventEmitted = true;
+        st.currentRound = OprfKeyGen.Round.THREE;
         if (st.generatedEpoch == 0) {
-            emit Types.SecretGenRound3(oprfKeyId);
+            emit OprfKeyGen.SecretGenRound3(oprfKeyId);
         } else {
-            emit Types.ReshareRound3(oprfKeyId, st.lagrangeCoeffs, st.generatedEpoch);
+            emit OprfKeyGen.ReshareRound3(oprfKeyId, st.lagrangeCoeffs, st.generatedEpoch);
         }
     }
 
     // Expects that callsite enforces that point is on the curve and in the correct sub-group (i.e. call _curveCheck).
-    function _addToAggregate(Types.BabyJubJubElement storage keyAggregate, uint256 newPointX, uint256 newPointY)
+    function _addToAggregate(BabyJubJub.Affine storage keyAggregate, BabyJubJub.Affine memory commShare)
         internal
         virtual
     {
-        if (_isEmpty(keyAggregate)) {
+        if (keyAggregate.isEmpty()) {
             // We checked above that the point is on curve, so we can just set it
-            keyAggregate.x = newPointX;
-            keyAggregate.y = newPointY;
+            keyAggregate.x = commShare.x;
+            keyAggregate.y = commShare.y;
             return;
         }
 
         // we checked above that the new point is on curve
         // the initial aggregate is on curve as well, checked inside the if above
         // induction: sum of two on-curve points is on-curve, so the result is on-curve as well
-        (uint256 resultX, uint256 resultY) = accumulator.add(keyAggregate.x, keyAggregate.y, newPointX, newPointY);
-
-        keyAggregate.x = resultX;
-        keyAggregate.y = resultY;
-    }
-
-    function _isEqual(Types.BabyJubJubElement memory lhs, Types.BabyJubJubElement memory rhs)
-        internal
-        pure
-        virtual
-        returns (bool)
-    {
-        return lhs.x == rhs.x && lhs.y == rhs.y;
-    }
-
-    function _isInfinity(Types.BabyJubJubElement memory element) internal pure virtual returns (bool) {
-        return element.x == 0 && element.y == 1;
-    }
-
-    function _isEmpty(Types.BabyJubJubElement memory element) internal pure virtual returns (bool) {
-        return element.x == 0 && element.y == 0;
+        BabyJubJub.Affine memory result = BabyJubJub.add(keyAggregate, commShare);
+        keyAggregate.x = result.x;
+        keyAggregate.y = result.y;
     }
 
     /// Performs sanity checks on BabyJubJub elements. If either the point
@@ -859,16 +839,15 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     ///     * is not in the large sub-group
     ///
     /// this method will revert the call.
-    function _curveChecks(Types.BabyJubJubElement memory element) internal view virtual {
-        uint256 x = element.x;
-        uint256 y = element.y;
+    function _curveChecks(BabyJubJub.Affine memory element) internal view virtual {
         if (
-            _isInfinity(element) || !accumulator.isOnCurve(x, y)
-                || !accumulator.isInCorrectSubgroupAssumingOnCurve(x, y)
+            BabyJubJub.isIdentity(element) || !BabyJubJub.isOnCurve(element)
+                || !BabyJubJub.isInCorrectSubgroupAssumingOnCurve(element)
         ) {
             revert BadContribution();
         }
     }
+
     ////////////////////////////////////////////////////////////
     //                    Upgrade Authorization               //
     ////////////////////////////////////////////////////////////

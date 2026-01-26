@@ -2,22 +2,20 @@
 pragma solidity ^0.8.20;
 
 import {BabyJubJub} from "../src/BabyJubJub.sol";
-import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
-import {Types} from "../src/Types.sol";
 import {Verifier as VerifierKeyGen13} from "../src/VerifierKeyGen13.sol";
 
 contract OprfKeyRegistryTest is Test {
-    using Types for Types.BabyJubJubElement;
+    using BabyJubJub for BabyJubJub.Affine;
 
     uint256 public constant THRESHOLD = 2;
     uint256 public constant MAX_PEERS = 3;
 
     OprfKeyRegistry public oprfKeyRegistry;
-    BabyJubJub public accumulator;
     VerifierKeyGen13 public verifierKeyGen;
     ERC1967Proxy public proxy;
 
@@ -25,15 +23,15 @@ contract OprfKeyRegistryTest is Test {
     address bob = address(0x2);
     address carol = address(0x3);
     address taceoAdmin = address(0x4);
+    address initOwner = 0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496; // the default addr of this test contract
 
     function setUp() public {
-        accumulator = new BabyJubJub();
         verifierKeyGen = new VerifierKeyGen13();
         // Deploy implementation
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, accumulator, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);
@@ -52,7 +50,7 @@ contract OprfKeyRegistryTest is Test {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, accumulator, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         ERC1967Proxy proxyTest = new ERC1967Proxy(address(implementation), initData);
@@ -63,6 +61,7 @@ contract OprfKeyRegistryTest is Test {
         assertEq(oprfKeyRegistryTest.threshold(), 2);
         assertEq(oprfKeyRegistryTest.numPeers(), 3);
         assert(!oprfKeyRegistryTest.isContractReady());
+        assert(oprfKeyRegistryTest.owner() == initOwner);
 
         // TODO call other functions to check that it reverts correctly
     }
@@ -72,7 +71,7 @@ contract OprfKeyRegistryTest is Test {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, accumulator, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         ERC1967Proxy proxyTest = new ERC1967Proxy(address(implementation), initData);
@@ -118,7 +117,7 @@ contract OprfKeyRegistryTest is Test {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, accumulator, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         ERC1967Proxy proxyTest = new ERC1967Proxy(address(implementation), initData);
@@ -139,7 +138,7 @@ contract OprfKeyRegistryTest is Test {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, accumulator, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         ERC1967Proxy proxyTest = new ERC1967Proxy(address(implementation), initData);
@@ -201,7 +200,7 @@ contract OprfKeyRegistryTest is Test {
         OprfKeyRegistry implementation = new OprfKeyRegistry();
         // Encode initializer call
         bytes memory initData = abi.encodeWithSelector(
-            OprfKeyRegistry.initialize.selector, taceoAdmin, verifierKeyGen, accumulator, THRESHOLD, MAX_PEERS
+            OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         // Deploy proxy
         ERC1967Proxy proxyTest = new ERC1967Proxy(address(implementation), initData);
@@ -216,27 +215,28 @@ contract OprfKeyRegistryTest is Test {
     }
 
     function testInitKeyGenRevokeRegisterAdmin() public {
+        uint160 oprfKeyId = 42;
         vm.startPrank(taceoAdmin);
         // register another admin
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenAdminRegistered(alice);
+        emit OprfKeyGen.KeyGenAdminRegistered(alice);
         oprfKeyRegistry.addKeyGenAdmin(alice);
         assertEq(2, oprfKeyRegistry.amountKeygenAdmins());
 
         // revoke taceo
         vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenAdminRevoked(taceoAdmin);
+        emit OprfKeyGen.KeyGenAdminRevoked(taceoAdmin);
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
 
         // try start key-gen as taceo
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.OnlyAdmin.selector));
-        oprfKeyRegistry.initKeyGen(0);
+        oprfKeyRegistry.initKeyGen(oprfKeyId);
         vm.stopPrank();
 
         // start key-gen as alice
         vm.prank(alice);
-        oprfKeyRegistry.initKeyGen(0);
+        oprfKeyRegistry.initKeyGen(oprfKeyId);
         vm.stopPrank();
     }
 
@@ -269,219 +269,30 @@ contract OprfKeyRegistryTest is Test {
 
     function testInitKeyGenResubmit() public {
         vm.prank(taceoAdmin);
-        oprfKeyRegistry.initKeyGen(0);
+        oprfKeyRegistry.initKeyGen(42);
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.AlreadySubmitted.selector));
         vm.prank(taceoAdmin);
+        oprfKeyRegistry.initKeyGen(42);
+    }
+
+    function testInitReshareBeforeKeyGen() public {
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
+        oprfKeyRegistry.initReshare(42);
+    }
+
+    function testInitKeyGenWithZero() public {
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.BadContribution.selector));
         oprfKeyRegistry.initKeyGen(0);
     }
 
-    function testDeleteBeforeRound1() public {
+    function testDeleteBeforeKeyGen() public {
         uint160 oprfKeyId = 42;
         vm.prank(taceoAdmin);
-        vm.expectEmit(true, true, true, true);
-        emit Types.SecretGenRound1(oprfKeyId, THRESHOLD);
-        oprfKeyRegistry.initKeyGen(oprfKeyId);
-        vm.stopPrank();
-        vm.prank(taceoAdmin);
         // now delete
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyDeletion(oprfKeyId);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
-        vm.stopPrank();
-
-        // check that we can add round1 but nothing happens
-        // do round 1 contributions
-        vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.loadPeerPublicKeysForProducers(oprfKeyId);
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.checkIsParticipantAndReturnRound2Ciphers(oprfKeyId);
-        vm.stopPrank();
-    }
-
-    function testDeleteDuringRound1() public {
-        uint160 oprfKeyId = 42;
-        vm.prank(taceoAdmin);
-        vm.expectEmit(true, true, true, true);
-        emit Types.SecretGenRound1(oprfKeyId, THRESHOLD);
-        oprfKeyRegistry.initKeyGen(oprfKeyId);
-        vm.stopPrank();
-
-        // check that we can add round1 but nothing happens
-        // do round 1 contributions
-        vm.prank(bob);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(taceoAdmin);
-        // now delete
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyDeletion(oprfKeyId);
-        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.aliceKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.loadPeerPublicKeysForProducers(oprfKeyId);
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.checkIsParticipantAndReturnRound2Ciphers(oprfKeyId);
-        vm.stopPrank();
-    }
-
-    function testDeleteDuringRound2() public {
-        uint160 oprfKeyId = 42;
-        vm.prank(taceoAdmin);
-        vm.expectEmit(true, true, true, true);
-        emit Types.SecretGenRound1(oprfKeyId, THRESHOLD);
-        oprfKeyRegistry.initKeyGen(oprfKeyId);
-        vm.stopPrank();
-
-        // do round 1 contributions
-        vm.prank(bob);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.aliceKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(carol);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.carolKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(bob);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
-        vm.stopPrank();
-
-        vm.prank(taceoAdmin);
-        // now delete
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyDeletion(oprfKeyId);
-        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
-        vm.stopPrank();
-
-        vm.recordLogs();
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.aliceKeyGenRound2Contribution());
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.loadPeerPublicKeysForProducers(oprfKeyId);
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.checkIsParticipantAndReturnRound2Ciphers(oprfKeyId);
-        vm.stopPrank();
-    }
-
-    function testDeleteDuringRound3() public {
-        uint160 oprfKeyId = 42;
-        vm.prank(taceoAdmin);
-        vm.expectEmit(true, true, true, true);
-        emit Types.SecretGenRound1(oprfKeyId, THRESHOLD);
-        oprfKeyRegistry.initKeyGen(oprfKeyId);
-        vm.stopPrank();
-
-        // do round 1 contributions
-        vm.prank(bob);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.aliceKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(carol);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
-        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.carolKeyGenRound1Contribution());
-        vm.stopPrank();
-
-        vm.prank(bob);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 2, 0);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.aliceKeyGenRound2Contribution());
-        vm.stopPrank();
-
-        vm.prank(carol);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 2, 2, 0);
-        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.carolKeyGenRound2Contribution());
-        vm.stopPrank();
-
-        // do round 3 contributions
-        vm.prank(alice);
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyGenConfirmation(oprfKeyId, 0, 3, 0);
-        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
-        vm.stopPrank();
-
-        vm.prank(taceoAdmin);
-        // now delete
-        vm.expectEmit(true, true, true, true);
-        emit Types.KeyDeletion(oprfKeyId);
-        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
-        vm.stopPrank();
-
-        vm.recordLogs();
-        vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.addRound3Contribution(oprfKeyId);
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, oprfKeyId));
-        oprfKeyRegistry.getOprfPublicKey(oprfKeyId);
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.loadPeerPublicKeysForProducers(oprfKeyId);
-        vm.stopPrank();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
-        oprfKeyRegistry.checkIsParticipantAndReturnRound2Ciphers(oprfKeyId);
         vm.stopPrank();
     }
 }
-

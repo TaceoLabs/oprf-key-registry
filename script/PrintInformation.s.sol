@@ -16,13 +16,11 @@ contract PrintInformationScript is Script {
         bool isContractReady = oprfKeyRegistry.isContractReady();
         uint256 amountAdmins = oprfKeyRegistry.amountKeygenAdmins();
         address keyGenVerifier = oprfKeyRegistry.keyGenVerifier();
-        address accumulator = address(oprfKeyRegistry.accumulator());
         uint256 threshold = oprfKeyRegistry.threshold();
         uint256 numPeers = oprfKeyRegistry.numPeers();
         console.log("isContractReady:", isContractReady);
         console.log("amountAdmins:", amountAdmins);
         console.log("keyGenVerifier:", keyGenVerifier);
-        console.log("accumulator:", accumulator);
         console.log("threshold:", threshold);
         console.log("numPeers:", numPeers);
         if (isContractReady) {
