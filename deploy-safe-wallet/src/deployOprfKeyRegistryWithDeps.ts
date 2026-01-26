@@ -17,8 +17,6 @@ const ARTIFACTS_DIR = join(__dirname, '../../out')
 // Deterministic CREATE2 factory (deployed on most networks)
 const CREATE2_FACTORY = '0x4e59b44847b379578588920cA78FbF26c0B4956C' as const
 
-const SAFE_CREATE_CALL = '0x9b35Af71d77eaf8d7e40252370304687390A1A52' as const
-
 // Network configurations
 const NETWORKS = {
   local: {
@@ -33,7 +31,7 @@ const NETWORKS = {
   },
   mainnet: {
     rpc: process.env.MAINNET_RPC_URL!,
-    chainId: 480n,
+    chainId: 480n, // World chain ID
     txServiceUrl: 'https://safe-transaction-worldchain.safe.global/api',
   },
 } as const
@@ -43,6 +41,7 @@ type NetworkName = keyof typeof NETWORKS
 interface DeploymentConfig {
   safeAddress: Address
   signerPrivateKey: Hex
+  taceoAdminAddress: Address
   threshold: number
   numPeers: number
   salt: Hex
@@ -57,9 +56,12 @@ interface Artifact {
 function loadArtifact(path: string): Artifact {
   const fullPath = join(ARTIFACTS_DIR, path)
   const content = JSON.parse(readFileSync(fullPath, 'utf-8'))
+  const bytecode = content.bytecode.object.startsWith('0x')
+    ? content.bytecode.object
+    : `0x${content.bytecode.object}`
   return {
     abi: content.abi,
-    bytecode: { object: content.bytecode.object as Hex },
+    bytecode: { object: bytecode as Hex },
   }
 }
 
@@ -85,17 +87,14 @@ function buildCreate2Tx(salt: Hex, initCode: Hex): MetaTransactionData {
 async function buildDeploymentTransactions(config: DeploymentConfig): Promise<{
   transactions: MetaTransactionData[]
   addresses: {
-    accumulator: Address
     verifier: Address
+    babyJubJub: Address
     implementation: Address
-    proxy: string // Not deterministic - deployed via CREATE from Safe
+    proxy: Address
   }
 }> {
-  const { threshold, numPeers, salt, safeAddress } = config
+  const { threshold, numPeers, salt, safeAddress, taceoAdminAddress } = config
 
-  // Load artifacts
-  const babyJubJubArtifact = loadArtifact('BabyJubJub.sol/BabyJubJub.json')
-  
   // Select verifier based on threshold/numPeers
   let verifierArtifact: Artifact
   if (threshold === 2 && numPeers === 3) {
@@ -105,22 +104,16 @@ async function buildDeploymentTransactions(config: DeploymentConfig): Promise<{
   } else {
     throw new Error(`Unsupported threshold/numPeers combination: ${threshold}/${numPeers}`)
   }
-  
+
   const registryArtifact = loadArtifact('OprfKeyRegistry.sol/OprfKeyRegistry.json')
   const proxyArtifact = loadArtifact('ERC1967Proxy.sol/ERC1967Proxy.json')
+  const babyJubJubArtifact = loadArtifact('BabyJubJub.sol/BabyJubJub.json')
 
-  // Use different salts for each contract to avoid collisions
-  const accumulatorSalt = keccak256(concat([salt, '0x01']))
-  const verifierSalt = keccak256(concat([salt, '0x02']))
-  const implSalt = keccak256(concat([salt, '0x03']))
-
-  // Compute deterministic addresses
-  const accumulatorInitCode = babyJubJubArtifact.bytecode.object
-  const accumulatorAddress = computeCreate2Address(
-    CREATE2_FACTORY,
-    accumulatorSalt,
-    keccak256(accumulatorInitCode)
-  )
+  // Use different salts for each contract to avoid collisions)
+  const verifierSalt = keccak256(concat([salt, '0x01']))
+  const implSalt = keccak256(concat([salt, '0x02']))
+  const proxySalt = keccak256(concat([salt, '0x03']))
+  const babyJubJubSalt = keccak256(concat([salt, '0x04']))
 
   const verifierInitCode = verifierArtifact.bytecode.object
   const verifierAddress = computeCreate2Address(
@@ -129,21 +122,35 @@ async function buildDeploymentTransactions(config: DeploymentConfig): Promise<{
     keccak256(verifierInitCode)
   )
 
-  const implInitCode = registryArtifact.bytecode.object
+  const babyJubJubInitCode = babyJubJubArtifact.bytecode.object
+  const babyJubJubAddress = computeCreate2Address(
+    CREATE2_FACTORY,
+    babyJubJubSalt,
+    keccak256(babyJubJubInitCode)
+  )
+
+  // Link library into implementation bytecode
+  const linkedImplBytecode = registryArtifact.bytecode.object.replace(
+    /__\$[a-fA-F0-9]{34}\$__/g,
+    babyJubJubAddress.slice(2).toLowerCase()
+  ) as Hex
+  const implInitCode = linkedImplBytecode
+
   const implAddress = computeCreate2Address(
     CREATE2_FACTORY,
     implSalt,
     keccak256(implInitCode)
   )
 
+
   // Encode initializer for proxy
   const initData = encodeFunctionData({
     abi: registryArtifact.abi,
     functionName: 'initialize',
     args: [
-      safeAddress,           // the Safe(Not TACEO Admin address for now...)
+      safeAddress,           // The Safe as Owner
+      taceoAdminAddress,     // Keygen Admin Owner
       verifierAddress,       // keyGenVerifier
-      accumulatorAddress,    // accumulator
       BigInt(threshold),
       BigInt(numPeers),
     ],
@@ -155,43 +162,27 @@ async function buildDeploymentTransactions(config: DeploymentConfig): Promise<{
     [implAddress, initData]
   )
   const proxyInitCode = concat([proxyArtifact.bytecode.object, proxyConstructorArgs])
+  const proxyAddress = computeCreate2Address(
+    CREATE2_FACTORY,
+    proxySalt,
+    keccak256(proxyInitCode)
+  )
 
-  const createCallData = encodeFunctionData({
-    abi: [{
-      name: 'performCreate',
-      type: 'function',
-      inputs: [
-        { name: 'value', type: 'uint256' },
-        { name: 'deploymentData', type: 'bytes' }
-      ],
-      outputs: [{ name: 'newContract', type: 'address' }]
-    }],
-    functionName: 'performCreate',
-    args: [0n, proxyInitCode],
-  })
-
-  // Build transactions
-  // First 3: CREATE2 deployments (deterministic addresses)
-  // Last 1: Deploy proxy via Safe's CreateCall (msg.sender = Safe in initializer)
+  // Build transactions - all via CREATE2
   const transactions: MetaTransactionData[] = [
-    buildCreate2Tx(accumulatorSalt, accumulatorInitCode),
     buildCreate2Tx(verifierSalt, verifierInitCode),
+    buildCreate2Tx(babyJubJubSalt, babyJubJubInitCode),
     buildCreate2Tx(implSalt, implInitCode),
-    {
-      to: SAFE_CREATE_CALL,
-      value: '0',
-      data: createCallData,
-      operation: OperationType.DelegateCall,
-    },
+    buildCreate2Tx(proxySalt, proxyInitCode),
   ]
 
   return {
     transactions,
     addresses: {
-      accumulator: accumulatorAddress,
       verifier: verifierAddress,
+      babyJubJub: babyJubJubAddress,
       implementation: implAddress,
-      proxy: '(determined at execution - check tx logs)',
+      proxy: proxyAddress,
     },
   }
 }
@@ -214,11 +205,11 @@ async function deployLocal(config: DeploymentConfig) {
 
   const { transactions, addresses } = await buildDeploymentTransactions(config)
 
-  console.log('📍 Predicted addresses:')
-  console.log('  Accumulator:', addresses.accumulator)
+  console.log('📍 Addresses:')
   console.log('  Verifier:', addresses.verifier)
+  console.log('  BabyJubJub Library:', addresses.babyJubJub)
   console.log('  Implementation:', addresses.implementation)
-  console.log('  Proxy: (will be in transaction logs)')
+  console.log('  Proxy:', addresses.proxy)
   console.log()
 
   console.log(`📦 Creating batch transaction with ${transactions.length} operations...`)
@@ -257,11 +248,11 @@ async function proposeToSafe(config: DeploymentConfig) {
 
   const { transactions, addresses } = await buildDeploymentTransactions(config)
 
-  console.log('📍 Predicted addresses (same on any network with this salt):')
-  console.log('  Accumulator:', addresses.accumulator)
+  console.log('📍 Addresses (same on any network with this salt):')
   console.log('  Verifier:', addresses.verifier)
+  console.log('  BabyJubJub Library:', addresses.babyJubJub)
   console.log('  Implementation:', addresses.implementation)
-  console.log('  Proxy: (will be in transaction logs after execution)')
+  console.log('  Proxy:', addresses.proxy)
   console.log()
 
   console.log(`📦 Creating batch transaction with ${transactions.length} operations...`)
@@ -306,6 +297,7 @@ async function main() {
   const config: DeploymentConfig = {
     safeAddress: process.env.SAFE_ADDRESS as Address,
     signerPrivateKey: process.env.SIGNER_PRIVATE_KEY as Hex,
+    taceoAdminAddress: process.env.TACEO_ADMIN_ADDRESS as Address,
     threshold: parseInt(process.env.THRESHOLD || '2'),
     numPeers: parseInt(process.env.NUM_PEERS || '3'),
     salt: process.env.DEPLOY_SALT as Hex,
@@ -314,6 +306,10 @@ async function main() {
 
   if (!config.safeAddress) {
     console.error('SAFE_ADDRESS environment variable required')
+    process.exit(1)
+  }
+  if (!config.taceoAdminAddress) {
+    console.error('TACEO_ADMIN_ADDRESS environment variable required')
     process.exit(1)
   }
   if (!config.signerPrivateKey) {
