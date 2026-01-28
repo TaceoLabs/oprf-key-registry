@@ -61,7 +61,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
     function testInitReshareResubmit() public {
         uint160 oprfKeyId = 42;
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
         testKeyGen();
         initReshare(oprfKeyId, generatedEpoch);
 
@@ -76,7 +76,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
     function reshare1() private {
         uint160 oprfKeyId = 42;
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
 
         initReshare(oprfKeyId, generatedEpoch);
 
@@ -90,7 +90,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
     function reshare2() private {
         uint160 oprfKeyId = 42;
-        uint128 generatedEpoch = 2;
+        uint32 generatedEpoch = 2;
 
         initReshare(oprfKeyId, generatedEpoch);
 
@@ -233,7 +233,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function testAbortDuringReshareMultipleTimes() public {
         // make a normal key-gen for id 42;
         testKeyGen();
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
         uint160 oprfKeyId = 42;
 
         initReshare(oprfKeyId, generatedEpoch);
@@ -267,7 +267,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         // make a normal key-gen for id 42;
         testKeyGen();
         uint160 oprfKeyId = 42;
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
 
         initReshare(oprfKeyId, generatedEpoch);
 
@@ -281,7 +281,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function testAbortReshareDuringRound1() public {
         // make a normal key-gen for id 42;
         testKeyGen();
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
         uint160 oprfKeyId = 42;
 
         initReshare(oprfKeyId, generatedEpoch);
@@ -306,7 +306,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function testAbortReshareBeforeRound2() public {
         // make a normal key-gen for id 42;
         testKeyGen();
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
         uint160 oprfKeyId = 42;
 
         initReshare(oprfKeyId, generatedEpoch);
@@ -318,7 +318,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function testAbortReshareDuringRound2() public {
         // make a normal key-gen for id 42;
         testKeyGen();
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
         uint160 oprfKeyId = 42;
 
         initReshare(oprfKeyId, generatedEpoch);
@@ -336,7 +336,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function testAbortReshareBeforeRound3() public {
         // make a normal key-gen for id 42;
         testKeyGen();
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
         uint160 oprfKeyId = 42;
 
         initReshare(oprfKeyId, generatedEpoch);
@@ -349,7 +349,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function testAbortReshareDuringRound3() public {
         // make a normal key-gen for id 42;
         testKeyGen();
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
         uint160 oprfKeyId = 42;
 
         initReshare(oprfKeyId, generatedEpoch);
@@ -373,7 +373,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
 
     function testReshareIsStuck() public {
         testKeyGen();
-        uint128 generatedEpoch = 1;
+        uint32 generatedEpoch = 1;
         uint160 oprfKeyId = 42;
         initReshare(oprfKeyId, generatedEpoch);
 
@@ -415,7 +415,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         reshare2();
     }
 
-    function initReshare(uint160 oprfKeyId, uint128 generatedEpoch) private {
+    function initReshare(uint160 oprfKeyId, uint32 generatedEpoch) private {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
         emit OprfKeyGen.ReshareRound1(oprfKeyId, THRESHOLD, generatedEpoch);
@@ -423,7 +423,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare1Round1Contributions(uint160 oprfKeyId, uint128 generatedEpoch) private {
+    function reshare1Round1Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
         // carol is a consumer here
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
@@ -446,7 +446,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare1Round2Contributions(uint160 oprfKeyId, uint128 generatedEpoch) private {
+    function reshare1Round2Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
         // do round 2 contributions
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
@@ -467,7 +467,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare1Round3Contributions(uint160 oprfKeyId, uint128 generatedEpoch) private {
+    function reshare1Round3Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
         // do round 3 contributions
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
@@ -498,7 +498,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare2Round1Contributions(uint160 oprfKeyId, uint128 generatedEpoch) private {
+    function reshare2Round1Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
         // alice is a consumer here
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
@@ -521,7 +521,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare2Round2Contributions(uint160 oprfKeyId, uint128 generatedEpoch) private {
+    function reshare2Round2Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
         emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 2, generatedEpoch);
@@ -541,7 +541,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare2Round3Contributions(uint160 oprfKeyId, uint128 generatedEpoch) private {
+    function reshare2Round3Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
         emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 3, generatedEpoch);

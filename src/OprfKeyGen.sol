@@ -30,7 +30,7 @@ library OprfKeyGen {
 
     struct RegisteredOprfPublicKey {
         BabyJubJub.Affine key;
-        uint128 epoch;
+        uint32 epoch;
     }
 
     struct Round1Contribution {
@@ -62,23 +62,23 @@ library OprfKeyGen {
         BabyJubJub.Affine[] shareCommitments;
         BabyJubJub.Affine[] prevShareCommitments;
         BabyJubJub.Affine keyAggregate;
-        uint128 numProducers;
-        uint128 generatedEpoch;
+        uint32 numProducers;
+        uint32 generatedEpoch;
         bool[] round2Done;
         bool[] round3Done;
         Round currentRound;
     }
 
     // Event that will be emitted during transaction of key-gens. This should signal the MPC-nodes that their transaction was successfully registered.
-    event KeyGenConfirmation(uint160 indexed oprfKeyId, uint16 indexed partyId, uint8 round, uint128 epoch);
+    event KeyGenConfirmation(uint160 indexed oprfKeyId, uint16 indexed partyId, uint8 round, uint32 epoch);
     // events for key-gen
     event SecretGenRound1(uint160 indexed oprfKeyId, uint256 threshold);
-    event SecretGenRound2(uint160 indexed oprfKeyId, uint128 indexed epoch);
+    event SecretGenRound2(uint160 indexed oprfKeyId, uint32 indexed epoch);
     event SecretGenRound3(uint160 indexed oprfKeyId);
-    event SecretGenFinalize(uint160 indexed oprfKeyId, uint128 indexed epoch);
+    event SecretGenFinalize(uint160 indexed oprfKeyId, uint32 indexed epoch);
     // events for reshare
-    event ReshareRound1(uint160 indexed oprfKeyId, uint256 threshold, uint128 indexed epoch);
-    event ReshareRound3(uint160 indexed oprfKeyId, uint256[] lagrange, uint128 indexed epoch);
+    event ReshareRound1(uint160 indexed oprfKeyId, uint256 threshold, uint32 indexed epoch);
+    event ReshareRound3(uint160 indexed oprfKeyId, uint256[] lagrange, uint32 indexed epoch);
     // event to delete created key
     event KeyDeletion(uint160 indexed oprfKeyId);
     // abort currently running key-gen
@@ -116,7 +116,7 @@ library OprfKeyGen {
     /// @param st The key-generation state to initialize.
     /// @param numPeers The total number of participating peers.
     /// @param generatedEpoch The new epoch to assign to the reshared key.
-    function initReshare(OprfKeyGenState storage st, uint256 numPeers, uint128 generatedEpoch) internal {
+    function initReshare(OprfKeyGenState storage st, uint256 numPeers, uint32 generatedEpoch) internal {
         delete st.lagrangeCoeffs;
 
         st.currentRound = Round.ONE;
