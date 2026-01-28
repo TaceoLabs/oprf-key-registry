@@ -283,7 +283,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         vm.stopPrank();
     }
 
-    function checkGeneratedKey(uint160 oprfKeyId, uint128 generatedEpoch) internal view {
+    function checkGeneratedKey(uint160 oprfKeyId, uint32 generatedEpoch) internal view {
         // check that the computed key is correct
         BabyJubJub.Affine memory oprfKey = oprfKeyRegistry.getOprfPublicKey(oprfKeyId);
         assertEq(oprfKey.x, Contributions.SHOULD_OPRF_PUBLIC_KEY_X);

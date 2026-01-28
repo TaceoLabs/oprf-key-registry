@@ -553,7 +553,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         st.round3Done[partyId] = true;
 
         // load generated epoch before delete to emit correct value
-        uint128 generatedEpoch = st.generatedEpoch;
+        uint32 generatedEpoch = st.generatedEpoch;
 
         if (allRound3Submitted(st)) {
             // We are done! Register the OPRF public-key and emit event!
