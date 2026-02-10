@@ -87,6 +87,8 @@ library OprfKeyGen {
     event KeyGenAdminRevoked(address indexed admin);
     event KeyGenAdminRegistered(address indexed admin);
     event NotEnoughProducers(uint160 indexed oprfKeyId);
+    // peer events
+    event OprfPeerChanged(uint16 partyId, address oldPeer, address newPeer);
 
     /// @notice Initializes the internal state for a new OPRF key-generation process.
     ///
