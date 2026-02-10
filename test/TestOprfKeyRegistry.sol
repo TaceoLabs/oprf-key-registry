@@ -6,6 +6,7 @@ import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry, IVerifierKeyGen13, PUBLIC_INPUT_LENGTH_KEYGEN_13} from "../src/OprfKeyRegistry.sol";
 
 uint256 constant INVALID_PROOF = 43;
+uint256 constant WRONG_ROUND_LOAD_PEER_PUBLIC_KEYS = 44;
 
 contract TestOprfKeyRegistry is OprfKeyRegistry {
     function emitDeleteEvent(uint160 oprfKeyId) public {
@@ -20,6 +21,9 @@ contract TestOprfKeyRegistry is OprfKeyRegistry {
         onlyProxy
         returns (BabyJubJub.Affine[] memory)
     {
+        if (WRONG_ROUND_LOAD_PEER_PUBLIC_KEYS == oprfKeyId) {
+            revert WrongRound(OprfKeyGen.Round.THREE);
+        }
         if (oprfKeyId == INVALID_PROOF) {
             // producer
             BabyJubJub.Affine memory p0 = BabyJubJub.Affine({
