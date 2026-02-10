@@ -209,6 +209,15 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
                 }
             }
         }
+        // emit event with the new peer addresses
+        for (uint256 i = 0; i < _peerAddresses.length; ++i) {
+            address oldPeerAddress = peerAddresses.length > i ? peerAddresses[i] : address(0);
+            if (oldPeerAddress != _peerAddresses[i]) {
+                // safe cast: numPeers is uint16 and we check that _peerAddresses.length == numPeers above
+                // forge-lint: disable-next-line(unsafe-typecast)
+                emit OprfKeyGen.OprfPeerChanged(uint16(i), oldPeerAddress, _peerAddresses[i]);
+            }
+        }
         // delete the old participants
         for (uint256 i = 0; i < peerAddresses.length; ++i) {
             delete addressToPeer[peerAddresses[i]];

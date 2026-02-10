@@ -42,6 +42,12 @@ contract OprfKeyRegistryTest is Test {
         peerAddresses[0] = alice;
         peerAddresses[1] = bob;
         peerAddresses[2] = carol;
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(0, address(0), alice);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(1, address(0), bob);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(2, address(0), carol);
         oprfKeyRegistry.registerOprfPeers(peerAddresses);
     }
 
@@ -84,6 +90,12 @@ contract OprfKeyRegistryTest is Test {
 
         // check that not ready
         assert(!oprfKeyRegistryTest.isContractReady());
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(0, address(0), alice);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(1, address(0), bob);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(2, address(0), carol);
         oprfKeyRegistryTest.registerOprfPeers(peerAddresses);
 
         // check that ready after call
@@ -175,6 +187,12 @@ contract OprfKeyRegistryTest is Test {
         peerAddresses[2] = taceoAdmin;
 
         // update
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(0, alice, bob);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(1, bob, carol);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(2, carol, taceoAdmin);
         oprfKeyRegistry.registerOprfPeers(peerAddresses);
 
         vm.prank(bob);
@@ -192,6 +210,27 @@ contract OprfKeyRegistryTest is Test {
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.NotAParticipant.selector));
         oprfKeyRegistry.getPartyIdForParticipant(alice);
+        vm.stopPrank();
+
+        address[] memory peerAddresses2 = new address[](3);
+        peerAddresses2[0] = bob;
+        peerAddresses2[1] = carol;
+        peerAddresses2[2] = alice;
+
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.OprfPeerChanged(2, taceoAdmin, alice);
+        oprfKeyRegistry.registerOprfPeers(peerAddresses2);
+
+        vm.prank(bob);
+        assertEq(oprfKeyRegistry.getPartyIdForParticipant(bob), 0);
+        vm.stopPrank();
+
+        vm.prank(carol);
+        assertEq(oprfKeyRegistry.getPartyIdForParticipant(carol), 1);
+        vm.stopPrank();
+
+        vm.prank(alice);
+        assertEq(oprfKeyRegistry.getPartyIdForParticipant(alice), 2);
         vm.stopPrank();
     }
 
