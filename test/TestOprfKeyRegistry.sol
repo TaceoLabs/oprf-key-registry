@@ -13,6 +13,10 @@ contract TestOprfKeyRegistry is OprfKeyRegistry {
         emit OprfKeyGen.KeyDeletion(oprfKeyId);
     }
 
+    function emitSecretGenFinalize(uint160 oprfKeyId, uint32 epoch) public {
+        emit OprfKeyGen.SecretGenFinalize(oprfKeyId, epoch);
+    }
+
     function loadPeerPublicKeysForProducers(uint160 oprfKeyId)
         public
         view
