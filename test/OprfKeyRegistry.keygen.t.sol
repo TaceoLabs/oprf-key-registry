@@ -144,7 +144,6 @@ contract OprfKeyRegistryKeyGenTest is Test {
     }
 
     function testAbortAfterDeleteShouldFail() public {
-
         uint160 oprfKeyId = 42;
         testKeyGen();
 
@@ -230,6 +229,79 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         deleteOprfKey(oprfKeyId);
         checkGeneratedIsDeleted(oprfKeyId);
+    }
+
+    function testKeyGenRound1Replay() public {
+        uint160 oprfKeyId = 42;
+        initKeyGen(oprfKeyId);
+        vm.prank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
+        vm.stopPrank();
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.BadContribution.selector));
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
+        vm.stopPrank();
+    }
+
+    function testKeyGenRound2Replay() public {
+        uint160 oprfKeyId = 42;
+        initKeyGen(oprfKeyId);
+        keyGenRound1Contributions(oprfKeyId);
+
+        vm.prank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
+        vm.stopPrank();
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(VerifierKeyGen13.ProofInvalid.selector));
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
+        vm.stopPrank();
+    }
+
+    function testKeyGenRound2ReplayButDistinctKey() public {
+        uint160 oprfKeyId = 42;
+        initKeyGen(oprfKeyId);
+        vm.prank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
+        vm.stopPrank();
+
+        OprfKeyGen.Round1Contribution memory bobReplay = Contributions.bobKeyGenRound1Contribution();
+        bobReplay.ephPubKey = Contributions.aliceKeyGenRound1Contribution().ephPubKey;
+
+        // this works now
+        vm.prank(alice);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, bobReplay);
+        vm.stopPrank();
+
+        vm.prank(carol);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.SecretGenRound2(oprfKeyId, 0);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.carolKeyGenRound1Contribution());
+        vm.stopPrank();
+
+        // Bob sends his proof
+        vm.prank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
+        vm.stopPrank();
+
+        // Alice can't just simply replay
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(VerifierKeyGen13.ProofInvalid.selector));
+        oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
+        vm.stopPrank();
     }
 
     function keyGenRound1Contributions(uint160 oprfKeyId) internal {

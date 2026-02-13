@@ -33,7 +33,6 @@ interface IOprfKeyRegistry {
     function revokeKeyGenAdmin(address _keygenAdmin) external;
 }
 
-
 /// @dev This contract does not include a storage gap. Upgrades are expected to be
 /// implemented via inheritance from this contract, which preserves the storage
 /// layout. No guarantees are provided for upgrade patterns that do not inherit
@@ -768,6 +767,8 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that we are in correct round
         if (st.currentRound != OprfKeyGen.Round.ONE) revert WrongRound(st.currentRound);
+        // check that the provided ephPubKey is distinct to prevent replay attacks
+        _ephKeyUniqueCheck(st, data.ephPubKey);
         // check that we don't have double submission
         if (!st.round1[partyId].commShare.isEmpty()) revert AlreadySubmitted();
         st.round1[partyId] = data;
@@ -870,6 +871,24 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
+    // Performs a uniqueness check for the provided ephemeral public key,
+    // which is a BabyJubJub point in affine coordinates.
+    //
+    // This method iterates over all ephemeral public keys submitted in round 1
+    // (including uninitialized entries) and checks that the provided public key
+    // (`needle`) is unique.
+    function _ephKeyUniqueCheck(OprfKeyGen.OprfKeyGenState storage st, BabyJubJub.Affine calldata needle)
+        internal
+        view
+        virtual
+    {
+        // Ensure that the provided ephemeral public key is distinct to prevent replay attacks.
+        for (uint256 i = 0; i < numPeers; ++i) {
+            if (BabyJubJub.isEqual(st.round1[i].ephPubKey, needle)) {
+                revert BadContribution();
+            }
+        }
+    }
     ////////////////////////////////////////////////////////////
     //                    Upgrade Authorization               //
     ////////////////////////////////////////////////////////////
