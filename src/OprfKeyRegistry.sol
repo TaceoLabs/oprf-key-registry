@@ -330,6 +330,9 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (st.currentRound == OprfKeyGen.Round.NOT_STARTED) {
             revert UnknownId(oprfKeyId);
         }
+        if (st.currentRound == OprfKeyGen.Round.DELETED) {
+            revert DeletedId(oprfKeyId);
+        }
         st.reset(numPeers, peerAddresses);
         emit OprfKeyGen.KeyGenAbort(oprfKeyId);
     }

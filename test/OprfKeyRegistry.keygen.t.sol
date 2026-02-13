@@ -143,6 +143,21 @@ contract OprfKeyRegistryKeyGenTest is Test {
         checkGeneratedKey(oprfKeyId, 0);
     }
 
+    function testAbortAfterDeleteShouldFail() public {
+
+        uint160 oprfKeyId = 42;
+        testKeyGen();
+
+        vm.prank(taceoAdmin);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.KeyDeletion(oprfKeyId);
+        oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
+        oprfKeyRegistry.abortKeyGen(oprfKeyId);
+        vm.stopPrank();
+    }
+
     function testDeleteBeforeRound1() public {
         uint160 oprfKeyId = 42;
         initKeyGen(oprfKeyId);
