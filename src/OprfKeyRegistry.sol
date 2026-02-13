@@ -33,6 +33,11 @@ interface IOprfKeyRegistry {
     function revokeKeyGenAdmin(address _keygenAdmin) external;
 }
 
+
+/// @dev This contract does not include a storage gap. Upgrades are expected to be
+/// implemented via inheritance from this contract, which preserves the storage
+/// layout. No guarantees are provided for upgrade patterns that do not inherit
+/// from this contract.
 contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgradeable, UUPSUpgradeable {
     using BabyJubJub for BabyJubJub.Affine;
     using OprfKeyGen for OprfKeyGen.OprfKeyGenState;
@@ -881,19 +886,13 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
      */
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
-    ////////////////////////////////////////////////////////////
-    //                    Storage Gap                         //
-    ////////////////////////////////////////////////////////////
-
-    /**
+    /* Storage gap:
+     * We do not include a storage gap due to the way we expect upgrades to work in practice.
+     * All upgrades are expected to be implemented as child contracts inheriting from this
+     * contract, which preserves the original storage layout and appends any new state
+     * variables in the derived contract.
      *
-     *
-     * @dev Storage gap to allow for future upgrades without storage collisions
-     *
-     *
-     * This is set to take a total of 50 storage slots for future state variables
-     *
-     *
+     * No guarantees are made for contracts that rely on this contract’s storage layout
+     * without inheriting from it.
      */
-    uint256[40] private __gap;
 }
