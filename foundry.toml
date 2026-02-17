@@ -10,6 +10,8 @@ optimizer_runs = 10000
 via_ir = true
 memory_limit = 1073741824
 gas_limit = "18446744073709551615"
+build_info = true
+extra_output = ["storageLayout"]
 
 [lint]
 exclude_lints = [
