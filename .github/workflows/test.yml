@@ -1,4 +1,4 @@
-name: CI
+name: Contract Tests
 
 permissions: {}
 
@@ -12,7 +12,7 @@ env:
 
 jobs:
   check:
-    name: Foundry project
+    name: Contract Tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
