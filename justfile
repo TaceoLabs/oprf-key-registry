@@ -26,42 +26,72 @@ show-contract-methods:
     forge inspect src/OprfKeyRegistry.sol:OprfKeyRegistry methodIdentifiers
 
 [group('deploy')]
+[working-directory("script/deploy")]
+deploy-oprf-key-registry-impl-dry-run *args:
+    forge script OprfKeyRegistryImpl.s.sol -vvvvv {{ args }}
+
+[group('deploy')]
+[working-directory("script/deploy")]
+deploy-oprf-key-registry-impl *args:
+    forge script OprfKeyRegistryImpl.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+
+[group('deploy')]
+[working-directory("script/deploy")]
+upgrade-oprf-key-registry-dry-run *args:
+    forge script UpgradeOprfKeyRegistry.s.sol -vvvvv {{ args }}
+
+[group('deploy')]
+[working-directory("script/deploy")]
+upgrade-oprf-key-registry *args:
+    forge script UpgradeOprfKeyRegistry.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+
+[group('deploy')]
+[working-directory("script/deploy")]
 deploy-oprf-key-registry-with-deps-dry-run *args:
     forge script OprfKeyRegistryWithDeps.s.sol -vvvvv {{ args }}
 
 [group('deploy')]
+[working-directory("script/deploy")]
 deploy-oprf-key-registry-with-deps *args:
     forge script OprfKeyRegistryWithDeps.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
 
 [group('deploy')]
+[working-directory("script/deploy")]
 deploy-oprf-key-registry-dry-run *args:
     forge script OprfKeyRegistry.s.sol -vvvvv {{ args }}
 
 [group('deploy')]
+[working-directory("script/deploy")]
 deploy-oprf-key-registry *args:
     forge script OprfKeyRegistry.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
 
 [group('contract')]
+[working-directory("script")]
 register-participants *args:
     forge script RegisterParticipants.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL
 
 [group('contract')]
+[working-directory("script")]
 register-participants-dry-run *args:
     forge script RegisterParticipants.s.sol -vvvvv {{ args }}
 
 [group('contract')]
+[working-directory("script")]
 revoke-key-gen-admin-dry-run *args:
     forge script RevokeKeyGenAdmin.s.sol -vvvvv {{ args }}
 
 [group('contract')]
+[working-directory("script/deploy")]
 revoke-key-gen-admin *args:
     forge script RevokeKeyGenAdmin.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
 
 [group('contract')]
+[working-directory("script")]
 register-key-gen-admin-dry-run *args:
     forge script RegisterKeyGenAdmin.s.sol -vvvvv {{ args }}
 
 [group('contract')]
+[working-directory("script")]
 register-key-gen-admin *args:
     forge script RegisterKeyGenAdmin.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
 
