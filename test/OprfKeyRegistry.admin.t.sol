@@ -308,16 +308,14 @@ contract OprfKeyRegistryTest is Test {
 
     function testChangeVerifierContract() public {
         address newAddress = address(0x42);
-        vm.startPrank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
         emit OprfKeyGen.VerifierContractChanged(address(verifierKeyGen), newAddress);
         oprfKeyRegistry.changeVerifierContract(newAddress);
-        vm.stopPrank();
     }
 
-    function testChangeVerifierContractNoAdmin() public {
+    function testChangeVerifierContractNoOwner() public {
         vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.OnlyAdmin.selector));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
         oprfKeyRegistry.changeVerifierContract(address(0x42));
         vm.stopPrank();
     }

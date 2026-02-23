@@ -186,7 +186,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     /// or trusted key generation verifier contract. Use with caution.
     ///
     /// @param newKeyGenVerifier The address of the new verifier contract
-    function changeVerifierContract(address newKeyGenVerifier) public virtual onlyProxy onlyInitialized onlyAdmin {
+    function changeVerifierContract(address newKeyGenVerifier) public virtual onlyProxy onlyInitialized onlyOwner {
         address oldKeyGenVerifier = keyGenVerifier;
         keyGenVerifier = newKeyGenVerifier;
         emit OprfKeyGen.VerifierContractChanged(oldKeyGenVerifier, newKeyGenVerifier);
