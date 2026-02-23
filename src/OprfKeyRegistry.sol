@@ -27,6 +27,7 @@ interface IVerifierKeyGen25 {
 interface IOprfKeyRegistry {
     function abortKeyGen(uint160 oprfKeyId) external;
     function addKeyGenAdmin(address _keygenAdmin) external;
+    function changeVerifierContract(address newKeyGenVerifier) external;
     function deleteOprfPublicKey(uint160 oprfKeyId) external;
     function initKeyGen(uint160 oprfKeyId) external;
     function initReshare(uint160 oprfKeyId) external;
@@ -177,6 +178,18 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             amountKeygenAdmins -= 1;
             emit OprfKeyGen.KeyGenAdminRevoked(_keygenAdmin);
         }
+    }
+
+    /// @notice Updates the key generation verifier contract.
+    ///
+    /// @dev This function does not verify whether the provided address is a valid
+    /// or trusted key generation verifier contract. Use with caution.
+    ///
+    /// @param newKeyGenVerifier The address of the new verifier contract
+    function changeVerifierContract(address newKeyGenVerifier) public virtual onlyProxy onlyInitialized onlyOwner {
+        address oldKeyGenVerifier = keyGenVerifier;
+        keyGenVerifier = newKeyGenVerifier;
+        emit OprfKeyGen.VerifierContractChanged(oldKeyGenVerifier, newKeyGenVerifier);
     }
 
     /// @notice Grants key-generation admin permissions to an address.

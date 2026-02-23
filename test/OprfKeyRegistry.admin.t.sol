@@ -306,6 +306,20 @@ contract OprfKeyRegistryTest is Test {
         assertEq(0, vm.getRecordedLogs().length);
     }
 
+    function testChangeVerifierContract() public {
+        address newAddress = address(0x42);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.VerifierContractChanged(address(verifierKeyGen), newAddress);
+        oprfKeyRegistry.changeVerifierContract(newAddress);
+    }
+
+    function testChangeVerifierContractNoOwner() public {
+        vm.startPrank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
+        oprfKeyRegistry.changeVerifierContract(address(0x42));
+        vm.stopPrank();
+    }
+
     function testInitKeyGenResubmit() public {
         vm.prank(taceoAdmin);
         oprfKeyRegistry.initKeyGen(42);
