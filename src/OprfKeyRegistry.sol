@@ -27,6 +27,7 @@ interface IVerifierKeyGen25 {
 interface IOprfKeyRegistry {
     function abortKeyGen(uint160 oprfKeyId) external;
     function addKeyGenAdmin(address _keygenAdmin) external;
+    function changeVerifierContract(address newKeyGenVerifier) external;
     function deleteOprfPublicKey(uint160 oprfKeyId) external;
     function initKeyGen(uint160 oprfKeyId) external;
     function initReshare(uint160 oprfKeyId) external;
