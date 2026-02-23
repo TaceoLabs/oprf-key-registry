@@ -179,6 +179,18 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
+    /// @notice Updates the key generation verifier contract.
+    ///
+    /// @dev This function does not verify whether the provided address is a valid
+    /// or trusted key generation verifier contract. Use with caution.
+    ///
+    /// @param newKeyGenVerifier The address of the new verifier contract
+    function changeVerifierContract(address newKeyGenVerifier) public virtual onlyProxy onlyInitialized onlyAdmin {
+        address oldKeyGenVerifier = keyGenVerifier;
+        keyGenVerifier = newKeyGenVerifier;
+        emit OprfKeyGen.VerifierContractChanged(oldKeyGenVerifier, newKeyGenVerifier);
+    }
+
     /// @notice Grants key-generation admin permissions to an address.
     ///
     /// @dev In the future, adding admins should require threshold authentication.

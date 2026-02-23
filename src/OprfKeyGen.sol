@@ -87,6 +87,7 @@ library OprfKeyGen {
     event KeyGenAdminRevoked(address indexed admin);
     event KeyGenAdminRegistered(address indexed admin);
     event NotEnoughProducers(uint160 indexed oprfKeyId);
+    event VerifierContractChanged(address indexed oldContract, address newContract);
     // peer events
     event OprfPeerChanged(uint16 indexed partyId, address indexed oldPeer, address indexed newPeer);
 
