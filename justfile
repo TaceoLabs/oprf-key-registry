@@ -95,6 +95,31 @@ register-key-gen-admin-dry-run *args:
 register-key-gen-admin *args:
     forge script RegisterKeyGenAdmin.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
 
+[group('contract')]
+[working-directory("script")]
+print-information:
+    forge script PrintInformation.s.sol -vvvvv --rpc-url $RPC_URL
+
+[group('contract')]
+[working-directory("script")]
+abort-key-gen-dry-run *args:
+    forge script AbortKeyGen.s.sol -vvvvv {{ args }}
+
+[group('contract')]
+[working-directory("script")]
+abort-key-gen *args:
+    forge script AbortKeyGen.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+
+[group('contract')]
+[working-directory("script")]
+init-key-gen-dry-run *args:
+    forge script InitKeyGen.s.sol -vvvvv {{ args }}
+
+[group('contract')]
+[working-directory("script")]
+init-key-gen *args:
+    forge script InitKeyGen.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+
 [group('anvil')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-with-deps-anvil:
