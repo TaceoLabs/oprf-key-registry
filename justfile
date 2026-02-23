@@ -118,7 +118,7 @@ init-key-gen-dry-run *args:
 [group('contract')]
 [working-directory("script")]
 init-key-gen *args:
-    forge script InitKeyGen.s.sol -vvvvv --broadcast --interactives 1 {{ args }}--rpc-url $RPC_URL
+    forge script InitKeyGen.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
 
 [group('anvil')]
 [working-directory("script/deploy")]
