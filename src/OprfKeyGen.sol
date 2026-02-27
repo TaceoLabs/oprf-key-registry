@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {BabyJubJub} from "./BabyJubJub.sol";
+import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
 
 /// @title Types Library
 /// @notice Defines common structs, enums, and constants for the project

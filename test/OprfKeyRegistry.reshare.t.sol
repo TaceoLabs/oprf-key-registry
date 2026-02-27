@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {BabyJubJub} from "../src/BabyJubJub.sol";
+import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
 import {Contributions} from "./Contributions.t.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";

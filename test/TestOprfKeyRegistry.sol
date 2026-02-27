@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {BabyJubJub} from "../src/BabyJubJub.sol";
+import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry, IVerifierKeyGen13, PUBLIC_INPUT_LENGTH_KEYGEN_13} from "../src/OprfKeyRegistry.sol";
 
