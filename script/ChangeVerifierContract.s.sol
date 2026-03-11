@@ -2,16 +2,16 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
+import {OprfKeyRegistryV2} from "../src/OprfKeyRegistryV2.sol";
 
 import {Verifier as Verifier13} from "../src/VerifierKeyGen13.sol";
 import {Verifier as Verifier25} from "../src/VerifierKeyGen25.sol";
 
 contract ChangeVerifierContractScript is Script {
-    OprfKeyRegistry public oprfKeyRegistry;
+    OprfKeyRegistryV2 public oprfKeyRegistry;
 
     function setUp() public {
-        oprfKeyRegistry = OprfKeyRegistry(vm.envAddress("OPRF_KEY_REGISTRY_PROXY"));
+        oprfKeyRegistry = OprfKeyRegistryV2(vm.envAddress("OPRF_KEY_REGISTRY_PROXY"));
     }
 
     function run() public {

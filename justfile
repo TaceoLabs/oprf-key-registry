@@ -5,6 +5,7 @@ default:
 [group('build')]
 export-contract-abi:
     forge build --silent && jq '.abi' out/OprfKeyRegistry.sol/OprfKeyRegistry.json > ../oprf-types/OprfKeyRegistry.json
+    jq '.abi' out/OprfKeyRegistryV2.sol/OprfKeyRegistryV2.json > ../oprf-types/OprfKeyRegistryV2.json
     cp out/VerifierKeyGen13.sol/Verifier.json ../oprf-test-utils/contracts/Verifier.13.json
     cp out/VerifierKeyGen25.sol/Verifier.json ../oprf-test-utils/contracts/Verifier.25.json
     cp out/BabyJubJub.sol/BabyJubJub.json ../oprf-test-utils/contracts/BabyJubJub.json
@@ -17,13 +18,13 @@ contract-tests:
 
 [group('build')]
 show-contract-errors:
-    forge inspect src/OprfKeyRegistry.sol:OprfKeyRegistry errors
+    forge inspect src/OprfKeyRegistryV2.sol:OprfKeyRegistryV2 errors
     forge inspect src/VerifierKeyGen13.sol:Verifier errors
     forge inspect src/VerifierKeyGen25.sol:Verifier errors
 
 [group('build')]
 show-contract-methods:
-    forge inspect src/OprfKeyRegistry.sol:OprfKeyRegistry methodIdentifiers
+    forge inspect src/OprfKeyRegistryV2.sol:OprfKeyRegistryV2 methodIdentifiers
 
 [group('deploy')]
 [working-directory("script/deploy")]
@@ -153,12 +154,12 @@ init-key-gen *args:
 [group('anvil')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-with-deps-anvil:
-    TACEO_ADMIN_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 THRESHOLD=2 NUM_PEERS=3 forge script OprfKeyRegistryWithDeps.s.sol --broadcast --fork-url http://127.0.0.1:8545 -vvvvv --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+    TACEO_ADMIN_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 THRESHOLD=2 NUM_PEERS=3 ENVIRONMENT=test PROJECT_DS=local forge script OprfKeyRegistryWithDeps.s.sol --broadcast --fork-url http://127.0.0.1:8545 -vvvvv --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
 [group('anvil')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-anvil:
-    TACEO_ADMIN_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 THRESHOLD=2 NUM_PEERS=3 forge script OprfKeyRegistry.s.sol --broadcast --fork-url http://127.0.0.1:8545 -vvvvv --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+    TACEO_ADMIN_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 THRESHOLD=2 NUM_PEERS=3 ENVIRONMENT=test PROJECT_DS=local forge script OprfKeyRegistry.s.sol --broadcast --fork-url http://127.0.0.1:8545 -vvvvv --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
 [group('anvil')]
 [working-directory("script")]

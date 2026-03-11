@@ -34,6 +34,25 @@ interface IOprfKeyRegistry {
     function revokeKeyGenAdmin(address _keygenAdmin) external;
 }
 
+interface IOprfKeyRegistryMpc {
+    function addRound1KeyGenContribution(uint160 oprfKeyId, OprfKeyGen.Round1Contribution calldata data) external;
+    function addRound1ReshareContribution(uint160 oprfKeyId, OprfKeyGen.Round1Contribution calldata data) external;
+    function addRound2Contribution(uint160 oprfKeyId, OprfKeyGen.Round2Contribution calldata data) external;
+    function addRound3Contribution(uint160 oprfKeyId) external;
+    function getPartyIdForParticipant(address participant) external view returns (uint256);
+    function loadPeerPublicKeysForProducers(uint160 oprfKeyId) external view returns (BabyJubJub.Affine[] memory);
+    function loadPeerPublicKeysForConsumers(uint160 oprfKeyId) external view returns (BabyJubJub.Affine[] memory);
+    function checkIsParticipantAndReturnRound2Ciphers(uint160 oprfKeyId)
+        external
+        view
+        returns (OprfKeyGen.SecretGenCiphertext[] memory);
+    function getOprfPublicKey(uint160 oprfKeyId) external view returns (BabyJubJub.Affine memory);
+    function getOprfPublicKeyAndEpoch(uint160 oprfKeyId)
+        external
+        view
+        returns (OprfKeyGen.RegisteredOprfPublicKey memory);
+}
+
 /// @dev This contract does not include a storage gap. Upgrades are expected to be
 /// implemented via inheritance from this contract, which preserves the storage
 /// layout. No guarantees are provided for upgrade patterns that do not inherit

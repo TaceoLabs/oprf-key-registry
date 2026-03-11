@@ -3,12 +3,13 @@ pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
 import {OprfKeyRegistry} from "../../src/OprfKeyRegistry.sol";
+import {OprfKeyRegistryV2} from "../../src/OprfKeyRegistryV2.sol";
 import {Verifier as VerifierKeyGen13} from "../../src/VerifierKeyGen13.sol";
 import {Verifier as VerifierKeyGen25} from "../../src/VerifierKeyGen25.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract TestSetupScript is Script {
-    OprfKeyRegistry public oprfKeyRegistry;
+    OprfKeyRegistryV2 public oprfKeyRegistry;
     ERC1967Proxy public proxy;
 
     function setUp() public {}
@@ -35,21 +36,25 @@ contract TestSetupScript is Script {
         address keyGenVerifierAddress = deployGroth16VerifierKeyGen(threshold, numPeers);
         address taceoAdminAddress = vm.envAddress("TACEO_ADMIN_ADDRESS");
         address owner = msg.sender;
+        string memory environmentTag = vm.envString("ENVIRONMENT");
+        string memory projectDs = vm.envString("PROJECT_DS");
 
         address[] memory participants = vm.envAddress("PARTICIPANT_ADDRESSES", ",");
         for (uint256 i = 0; i < participants.length; i++) {
             console.log("Registering participant address:", participants[i]);
         }
 
-        // Deploy implementation
-        OprfKeyRegistry implementation = new OprfKeyRegistry();
-        // Encode initializer call
+        // Deploy V2 implementation
+        OprfKeyRegistryV2 implementation = new OprfKeyRegistryV2();
+        // Encode initializer call (uses V1 initialize, inherited by V2)
         bytes memory initData = abi.encodeWithSelector(
             OprfKeyRegistry.initialize.selector, owner, taceoAdminAddress, keyGenVerifierAddress, threshold, numPeers
         );
         // Deploy proxy
         proxy = new ERC1967Proxy(address(implementation), initData);
-        oprfKeyRegistry = OprfKeyRegistry(address(proxy));
+        oprfKeyRegistry = OprfKeyRegistryV2(address(proxy));
+        // Initialize V2-specific state
+        oprfKeyRegistry.initializeV2(environmentTag, projectDs);
 
         oprfKeyRegistry.registerOprfPeers(participants);
 
@@ -57,6 +62,6 @@ contract TestSetupScript is Script {
         assert(oprfKeyRegistry.isContractReady());
         vm.stopBroadcast();
 
-        console.log("OprfKeyRegistry deployed to:", address(oprfKeyRegistry));
+        console.log("OprfKeyRegistryV2 deployed to:", address(oprfKeyRegistry));
     }
 }

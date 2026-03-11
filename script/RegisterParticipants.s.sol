@@ -2,16 +2,16 @@
 pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
-import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
+import {OprfKeyRegistryV2} from "../src/OprfKeyRegistryV2.sol";
 
 contract RegisterParticipantScript is Script {
-    OprfKeyRegistry public oprfKeyRegistry;
+    OprfKeyRegistryV2 public oprfKeyRegistry;
 
     function setUp() public {
         address oprfKeyRegistryAddress = vm.envAddress("OPRF_KEY_REGISTRY_PROXY");
         console.log("register Participants for OprfKeyRegistry Proxy contract at:", oprfKeyRegistryAddress);
 
-        oprfKeyRegistry = OprfKeyRegistry(oprfKeyRegistryAddress);
+        oprfKeyRegistry = OprfKeyRegistryV2(oprfKeyRegistryAddress);
     }
 
     function run() public {
