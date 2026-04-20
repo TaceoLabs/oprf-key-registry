@@ -6,34 +6,11 @@ import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
+import {UnreleasedOprfKeyRegistryV2} from "../src/UnreleasedOprfKeyRegistryV2.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Test} from "forge-std/Test.sol";
 import {Verifier as VerifierKeyGen13} from "../src/VerifierKeyGen13.sol";
-
-/**
- *
- *
- * @title OprfKeyRegistryV2Mock
- *
- *
- * @notice Mock V2 implementation for testing upgrades
- *
- *
- */
-contract OprfKeyRegistryV2Mock is OprfKeyRegistry {
-    // Add a new state variable to test storage layout preservation
-
-    uint256 public newFeature;
-
-    function version() public pure returns (string memory) {
-        return "V2";
-    }
-
-    function setNewFeature(uint256 _value) public {
-        newFeature = _value;
-    }
-}
 
 contract OprfKeyRegistryUpgradeTest is Test {
     using BabyJubJub for BabyJubJub.Affine;
@@ -163,11 +140,11 @@ contract OprfKeyRegistryUpgradeTest is Test {
         assertEq(oprfKey.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
 
         // Now perform upgrade
-        OprfKeyRegistryV2Mock implementationV2 = new OprfKeyRegistryV2Mock();
+        UnreleasedOprfKeyRegistryV2 implementationV2 = new UnreleasedOprfKeyRegistryV2();
         // upgrade as owner
         OprfKeyRegistry(address(proxy)).upgradeToAndCall(address(implementationV2), "");
         // Wrap proxy with V2 interface
-        OprfKeyRegistryV2Mock oprfKeyRegistryV2 = OprfKeyRegistryV2Mock(address(proxy));
+        UnreleasedOprfKeyRegistryV2 oprfKeyRegistryV2 = UnreleasedOprfKeyRegistryV2(address(proxy));
 
         // Verify storage was preserved
         BabyJubJub.Affine memory oprfKeyV2 = oprfKeyRegistryV2.getOprfPublicKey(oprfKeyId);
@@ -175,12 +152,26 @@ contract OprfKeyRegistryUpgradeTest is Test {
         assertEq(oprfKeyV2.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
 
         // Verify new functionality works
-        assertEq(oprfKeyRegistryV2.version(), "V2");
-        oprfKeyRegistryV2.setNewFeature(42);
-        assertEq(oprfKeyRegistryV2.newFeature(), 42);
+        uint160 stuckOprfKeyId = 43;
+        vm.prank(taceoAdmin);
+        vm.expectEmit(true, true, true, true);
+        emit OprfKeyGen.SecretGenRound1(stuckOprfKeyId, THRESHOLD);
+        oprfKeyRegistryV2.initKeyGen(stuckOprfKeyId);
+        vm.stopPrank();
+
+        vm.prank(alice);
+        vm.expectEmit(true, true, true, true);
+        emit UnreleasedOprfKeyRegistryV2.KeyGenStuckReported(stuckOprfKeyId, alice, OprfKeyGen.Round.ONE);
+        oprfKeyRegistryV2.reportKeyGenStuck(stuckOprfKeyId);
+        vm.stopPrank();
+
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 4));
+        oprfKeyRegistryV2.addRound1KeyGenContribution(stuckOprfKeyId, Contributions.bobKeyGenRound1Contribution());
+        vm.stopPrank();
 
         // Verify old functionality still works
-        uint160 newOprfKeyId = 43;
+        uint160 newOprfKeyId = 44;
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
         emit OprfKeyGen.SecretGenRound1(newOprfKeyId, 2);
