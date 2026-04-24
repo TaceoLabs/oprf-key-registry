@@ -2,6 +2,11 @@
 default:
     @just --justfile {{ justfile() }} --list --list-heading $'Project commands:\n'
 
+trace_flags := "-vvvvv"
+rpc_flags := "--rpc-url $RPC_URL"
+live_flags := "--broadcast --interactives 1"
+deploy_verify_flags := "--verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY"
+
 [group('build')]
 export-contract-abi:
     forge build --silent && jq '.abi' out/OprfKeyRegistry.sol/OprfKeyRegistry.json > ../oprf-types/OprfKeyRegistry.json
@@ -28,127 +33,127 @@ show-contract-methods:
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-key-gen-verifier-contract13-dry-run *args:
-    forge script Groth16VerifierKeyGen13.s.sol -vvvvv --rpc-url $RPC_URL {{ args }} 
+    forge script Groth16VerifierKeyGen13.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-key-gen-verifier-contract13 *args:
-    forge script Groth16VerifierKeyGen13.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+    forge script Groth16VerifierKeyGen13.s.sol {{ live_flags }} {{ trace_flags }} {{ args }} {{ rpc_flags }} {{ deploy_verify_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-key-gen-verifier-contract25-dry-run *args:
-    forge script Groth16VerifierKeyGen25.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script Groth16VerifierKeyGen25.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-key-gen-verifier-contract25 *args:
-    forge script Groth16VerifierKeyGen25.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+    forge script Groth16VerifierKeyGen25.s.sol {{ live_flags }} {{ trace_flags }} {{ args }} {{ rpc_flags }} {{ deploy_verify_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-impl-dry-run *args:
-    forge script OprfKeyRegistryImpl.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script OprfKeyRegistryImpl.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-impl *args:
-    forge script OprfKeyRegistryImpl.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+    forge script OprfKeyRegistryImpl.s.sol {{ live_flags }} {{ trace_flags }} {{ args }} {{ rpc_flags }} {{ deploy_verify_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 upgrade-oprf-key-registry-dry-run *args:
-    forge script UpgradeOprfKeyRegistry.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script UpgradeOprfKeyRegistry.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 upgrade-oprf-key-registry *args:
-    forge script UpgradeOprfKeyRegistry.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+    forge script UpgradeOprfKeyRegistry.s.sol {{ live_flags }} {{ trace_flags }} {{ args }} {{ rpc_flags }} {{ deploy_verify_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-with-deps-dry-run *args:
-    forge script OprfKeyRegistryWithDeps.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script OprfKeyRegistryWithDeps.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-with-deps *args:
-    forge script OprfKeyRegistryWithDeps.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+    forge script OprfKeyRegistryWithDeps.s.sol {{ live_flags }} {{ trace_flags }} {{ args }} {{ rpc_flags }} {{ deploy_verify_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-dry-run *args:
-    forge script OprfKeyRegistry.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script OprfKeyRegistry.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('deploy')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry *args:
-    forge script OprfKeyRegistry.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL --verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY
+    forge script OprfKeyRegistry.s.sol {{ live_flags }} {{ trace_flags }} {{ args }} {{ rpc_flags }} {{ deploy_verify_flags }}
 
 [group('contract')]
 [working-directory("script")]
 register-participants *args:
-    forge script RegisterParticipants.s.sol --broadcast --interactives 1 -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script RegisterParticipants.s.sol {{ live_flags }} {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 register-participants-dry-run *args:
-    forge script RegisterParticipants.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script RegisterParticipants.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 change-verifier-contract-dry-run *args:
-    forge script ChangeVerifierContract.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script ChangeVerifierContract.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 change-verifier-contract *args:
-    forge script ChangeVerifierContract.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+    forge script ChangeVerifierContract.s.sol {{ trace_flags }} {{ live_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 revoke-key-gen-admin-dry-run *args:
-    forge script RevokeKeyGenAdmin.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script RevokeKeyGenAdmin.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 revoke-key-gen-admin *args:
-    forge script RevokeKeyGenAdmin.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+    forge script RevokeKeyGenAdmin.s.sol {{ trace_flags }} {{ live_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 register-key-gen-admin-dry-run *args:
-    forge script RegisterKeyGenAdmin.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script RegisterKeyGenAdmin.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 register-key-gen-admin *args:
-    forge script RegisterKeyGenAdmin.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+    forge script RegisterKeyGenAdmin.s.sol {{ trace_flags }} {{ live_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 print-information:
-    forge script PrintInformation.s.sol -vvvvv --rpc-url $RPC_URL
+    forge script PrintInformation.s.sol {{ trace_flags }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 abort-key-gen-dry-run *args:
-    forge script AbortKeyGen.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script AbortKeyGen.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 abort-key-gen *args:
-    forge script AbortKeyGen.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+    forge script AbortKeyGen.s.sol {{ trace_flags }} {{ live_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 init-key-gen-dry-run *args:
-    forge script InitKeyGen.s.sol -vvvvv {{ args }} --rpc-url $RPC_URL
+    forge script InitKeyGen.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
 [group('contract')]
 [working-directory("script")]
 init-key-gen *args:
-    forge script InitKeyGen.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+    forge script InitKeyGen.s.sol {{ trace_flags }} {{ live_flags }} {{ args }} {{ rpc_flags }}
 
 [group('anvil')]
 [working-directory("script/deploy")]
