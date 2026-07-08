@@ -40,7 +40,7 @@ interface IOprfKeyRegistry {
 
     /// @notice Emitted once all peers have submitted Round 1 for a key-gen, signaling producers to submit Round 2.
     /// @param oprfKeyId The unique identifier for the OPRF key process.
-    /// @param epoch The reshare epoch; always 0 for this event, since it only fires during the initial key-gen.
+    /// @param epoch The epoch: 0 for the initial key-gen, or the new reshare epoch during a reshare.
     event SecretGenRound2(uint160 indexed oprfKeyId, uint32 indexed epoch);
 
     /// @notice Emitted once enough producers have submitted Round 2 for a key-gen, signaling all peers to submit Round 3.
@@ -288,4 +288,29 @@ interface IOprfKeyRegistry {
         external
         view
         returns (OprfKeyGen.RegisteredOprfPublicKey memory);
+
+    // ==================================
+    //           STATE GETTERS
+    // ==================================
+
+    /// @notice Whether the contract is ready (i.e. `registerOprfPeers` has completed).
+    function isContractReady() external view returns (bool);
+
+    /// @notice Returns whether the given address is a key-generation admin.
+    function keygenAdmins(address admin) external view returns (bool);
+
+    /// @notice The number of registered key-generation admins.
+    function amountKeygenAdmins() external view returns (uint256);
+
+    /// @notice The address of the current key-generation Groth16 verifier contract.
+    function keyGenVerifier() external view returns (address);
+
+    /// @notice The threshold number of producers required for key-gen/reshare.
+    function threshold() external view returns (uint16);
+
+    /// @notice The total number of OPRF peers.
+    function numPeers() external view returns (uint16);
+
+    /// @notice The registered peer address at the given index (indices `0..numPeers-1`).
+    function peerAddresses(uint256 index) external view returns (address);
 }
