@@ -13,6 +13,8 @@ import {IUnreleasedOprfKeyRegistryV2} from "./IUnreleasedOprfKeyRegistryV2.sol";
 /// @dev Change list for this version:
 /// - Adds `reportKeyGenStuck(uint160)` so registered nodes can report key-generation/reshare processes as stuck.
 /// - Adds ERC165 support.
+/// - Adds `getPeerAddresses`. Returns the full array of addresses of registered peers
+/// - Adds `isParticipant(address addr)`. Returns true iff the provided address is in the list of participants
 /// @custom:oz-upgrades-from OprfKeyRegistry
 contract UnreleasedOprfKeyRegistryV2 is OprfKeyRegistry, IUnreleasedOprfKeyRegistryV2, ERC165 {
     /// @notice Allows a registered OPRF node to report an active key-gen/reshare is stuck.
