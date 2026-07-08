@@ -40,4 +40,17 @@ contract UnreleasedOprfKeyRegistryV2 is OprfKeyRegistry, IUnreleasedOprfKeyRegis
         return interfaceId == type(IOprfKeyRegistry).interfaceId
             || interfaceId == type(IUnreleasedOprfKeyRegistryV2).interfaceId || super.supportsInterface(interfaceId);
     }
+
+    /// @notice Returns the list of registered OPRF peer addresses, indexed by party ID.
+    /// @return The registered peer addresses in party-ID order.
+    function getPeerAddresses() public view virtual onlyProxy returns (address[] memory) {
+        return peerAddresses;
+    }
+
+    /// @notice Checks whether the given address is a registered OPRF participant.
+    /// @param addr The address to check.
+    /// @return True if `addr` is a registered participant.
+    function isParticipant(address addr) public view virtual onlyProxy returns (bool) {
+        return addressToPeer[addr].isParticipant;
+    }
 }

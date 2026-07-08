@@ -94,4 +94,17 @@ contract OprfKeyRegistryV2Test is Test {
         vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.WrongRound.selector, 4));
         oprfKeyRegistry.reportKeyGenStuck(oprfKeyId);
     }
+
+    function testGetPeerAddresses() public view {
+        address[] memory peers = oprfKeyRegistry.getPeerAddresses();
+        assertEq(peers.length, 3);
+        assertEq(peers[0], alice);
+        assertEq(peers[1], bob);
+        assertEq(peers[2], carol);
+    }
+
+    function testIsParticipant() public view {
+        assertTrue(oprfKeyRegistry.isParticipant(alice));
+        assertFalse(oprfKeyRegistry.isParticipant(address(0xdeadbeef)));
+    }
 }
