@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
 import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
 import {IUnreleasedOprfKeyRegistryV2} from "../src/IUnreleasedOprfKeyRegistryV2.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
@@ -247,5 +248,21 @@ contract OprfKeyRegistryUpgradeTest is Test {
         BabyJubJub.Affine memory oprfKeyNew = oprfKeyRegistry.getOprfPublicKey(newOprfKeyId);
         assertEq(oprfKeyNew.x, Contributions.SHOULD_OPRF_PUBLIC_KEY_X);
         assertEq(oprfKeyNew.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
+    }
+
+    function testSupportsInterfaceAfterUpgrade() public {
+        // V1 does not implement ERC165 at all
+        vm.expectRevert();
+        IERC165(address(proxy)).supportsInterface(type(IERC165).interfaceId);
+
+        // Now perform upgrade
+        UnreleasedOprfKeyRegistryV2 implementationV2 = new UnreleasedOprfKeyRegistryV2();
+        OprfKeyRegistry(address(proxy)).upgradeToAndCall(address(implementationV2), "");
+        UnreleasedOprfKeyRegistryV2 oprfKeyRegistryV2 = UnreleasedOprfKeyRegistryV2(address(proxy));
+
+        assertTrue(oprfKeyRegistryV2.supportsInterface(type(IOprfKeyRegistry).interfaceId));
+        assertTrue(oprfKeyRegistryV2.supportsInterface(type(IUnreleasedOprfKeyRegistryV2).interfaceId));
+        assertTrue(oprfKeyRegistryV2.supportsInterface(type(IERC165).interfaceId));
+        assertFalse(oprfKeyRegistryV2.supportsInterface(0xffffffff));
     }
 }
