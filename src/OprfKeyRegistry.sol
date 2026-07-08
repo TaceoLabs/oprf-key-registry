@@ -6,33 +6,13 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {OprfKeyGen} from "./OprfKeyGen.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
-uint256 constant PUBLIC_INPUT_LENGTH_KEYGEN_13 = 24;
-uint256 constant PUBLIC_INPUT_LENGTH_KEYGEN_25 = 36;
-
-interface IVerifierKeyGen13 {
-    function verifyCompressedProof(
-        uint256[4] calldata compressedProof,
-        uint256[PUBLIC_INPUT_LENGTH_KEYGEN_13] calldata input
-    ) external view;
-}
-
-interface IVerifierKeyGen25 {
-    function verifyCompressedProof(
-        uint256[4] calldata compressedProof,
-        uint256[PUBLIC_INPUT_LENGTH_KEYGEN_25] calldata input
-    ) external view;
-}
-
-interface IOprfKeyRegistry {
-    function abortKeyGen(uint160 oprfKeyId) external;
-    function addKeyGenAdmin(address _keygenAdmin) external;
-    function changeVerifierContract(address newKeyGenVerifier) external;
-    function deleteOprfPublicKey(uint160 oprfKeyId) external;
-    function initKeyGen(uint160 oprfKeyId) external;
-    function initReshare(uint160 oprfKeyId) external;
-    function revokeKeyGenAdmin(address _keygenAdmin) external;
-}
+import {
+    IOprfKeyRegistry,
+    IVerifierKeyGen25,
+    IVerifierKeyGen13,
+    PUBLIC_INPUT_LENGTH_KEYGEN_13,
+    PUBLIC_INPUT_LENGTH_KEYGEN_25
+} from "./IOprfKeyRegistry.sol";
 
 /// @dev This contract does not include a storage gap. Upgrades are expected to be
 /// implemented via inheritance from this contract, which preserves the storage
@@ -109,23 +89,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         bool isOwner = owner() == msg.sender;
         if (!isAdmin && !isOwner) revert OnlyAdmin();
     }
-    // =============================================
-    //                Errors
-    // =============================================
-    error AlreadySubmitted();
-    error BadContribution();
-    error DeletedId(uint160 id);
-    error ImplementationNotInitialized();
-    error LastAdmin();
-    error NotAParticipant();
-    error NotAProducer();
-    error NotReady();
-    error OnlyAdmin();
-    error PartiesNotDistinct();
-    error UnexpectedAmountPeers(uint256 expectedParties);
-    error UnknownId(uint160 id);
-    error UnsupportedNumPeersThreshold();
-    error WrongRound(OprfKeyGen.Round);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -176,7 +139,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             }
             delete keygenAdmins[_keygenAdmin];
             amountKeygenAdmins -= 1;
-            emit OprfKeyGen.KeyGenAdminRevoked(_keygenAdmin);
+            emit KeyGenAdminRevoked(_keygenAdmin);
         }
     }
 
@@ -189,7 +152,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     function changeVerifierContract(address newKeyGenVerifier) public virtual onlyProxy onlyInitialized onlyOwner {
         address oldKeyGenVerifier = keyGenVerifier;
         keyGenVerifier = newKeyGenVerifier;
-        emit OprfKeyGen.VerifierContractChanged(oldKeyGenVerifier, newKeyGenVerifier);
+        emit VerifierContractChanged(oldKeyGenVerifier, newKeyGenVerifier);
     }
 
     /// @notice Grants key-generation admin permissions to an address.
@@ -203,7 +166,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (!keygenAdmins[_keygenAdmin]) {
             keygenAdmins[_keygenAdmin] = true;
             amountKeygenAdmins += 1;
-            emit OprfKeyGen.KeyGenAdminRegistered(_keygenAdmin);
+            emit KeyGenAdminRegistered(_keygenAdmin);
         }
     }
 
@@ -232,7 +195,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             if (oldPeerAddress != _peerAddresses[i]) {
                 // safe cast: numPeers is uint16 and we check that _peerAddresses.length == numPeers above
                 // forge-lint: disable-next-line(unsafe-typecast)
-                emit OprfKeyGen.OprfPeerChanged(uint16(i), oldPeerAddress, _peerAddresses[i]);
+                emit OprfPeerChanged(uint16(i), oldPeerAddress, _peerAddresses[i]);
             }
         }
         // delete the old participants
@@ -270,7 +233,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
         st.initKeyGen(numPeers);
         // Emit Round1 event for everyone
-        emit OprfKeyGen.SecretGenRound1(oprfKeyId, threshold);
+        emit SecretGenRound1(oprfKeyId, threshold);
     }
 
     /// @notice Initializes a reshare process for a given OPRF key ID.
@@ -299,7 +262,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // we need to leave the share commitments to check the peers are using the correct input
         st.initReshare(numPeers, oprfPublicKey.epoch + 1);
         // Emit Round1 event for everyone
-        emit OprfKeyGen.ReshareRound1(oprfKeyId, threshold, st.generatedEpoch);
+        emit ReshareRound1(oprfKeyId, threshold, st.generatedEpoch);
     }
 
     /// @notice Deletes an OPRF public key and all associated state.
@@ -324,7 +287,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
             // delete the runningKeyGen data as well
             st.deleteSt(numPeers, peerAddresses);
-            emit OprfKeyGen.KeyDeletion(oprfKeyId);
+            emit KeyDeletion(oprfKeyId);
         } else {
             revert UnknownId(oprfKeyId);
         }
@@ -346,7 +309,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             revert DeletedId(oprfKeyId);
         }
         st.reset(numPeers, peerAddresses);
-        emit OprfKeyGen.KeyGenAbort(oprfKeyId);
+        emit KeyGenAbort(oprfKeyId);
     }
 
     // ==================================
@@ -379,7 +342,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // everyone is a producer therefore we wait for numPeers amount producers
         _tryEmitRound2Event(oprfKeyId, numPeers, st);
         // Emit the transaction confirmation
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
+        emit KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
     }
 
     /// @notice Adds a Round 1 contribution to the re-sharing process. Only callable by registered OPRF peers. This method does some more work than the basic key-gen.
@@ -443,7 +406,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // we need a contribution from everyone but only threshold many producers. If we don't manage to find enough producers, we will emit an event so that the admin can intervene.
         _tryEmitRound2Event(oprfKeyId, threshold, st);
         // Emit the transaction confirmation
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
+        emit KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
     }
 
     /// @notice Adds a Round 2 contribution to the key generation process. Only callable by registered OPRF peers. Is the same for key-gen and reshare, with the small difference with how the commitments for next reshare are computed and that we need less producers for reshare.
@@ -563,7 +526,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         _tryEmitRound3Event(oprfKeyId, necessaryContributions, st);
 
         // Emit the transaction confirmation
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 2, st.generatedEpoch);
+        emit KeyGenConfirmation(oprfKeyId, partyId, 2, st.generatedEpoch);
     }
 
     /// @notice Adds a Round 3 contribution to the key generation process. Only callable by registered OPRF peers. This is exactly the same process for key-gen and reshare because nodes just acknowledge that they received their ciphertexts.
@@ -595,12 +558,12 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             // Save the current share commitments for the next reshare
             st.prevShareCommitments = st.shareCommitments;
 
-            emit OprfKeyGen.SecretGenFinalize(oprfKeyId, st.generatedEpoch);
+            emit SecretGenFinalize(oprfKeyId, st.generatedEpoch);
             // cleanup all old data - we need to keep shareCommitments though otherwise we can't do reshares
             st.reset(numPeers, peerAddresses);
         }
         // Emit the transaction confirmation
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, partyId, 3, generatedEpoch);
+        emit KeyGenConfirmation(oprfKeyId, partyId, 3, generatedEpoch);
     }
 
     // ==================================
@@ -824,12 +787,12 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (!allRound1Submitted(st)) return;
         if (st.numProducers < necessaryContributions) {
             // everyone contributed but we are don't have enough producers. This is an alert and we need to abort!
-            emit OprfKeyGen.NotEnoughProducers(oprfKeyId);
+            emit NotEnoughProducers(oprfKeyId);
             st.currentRound = OprfKeyGen.Round.STUCK;
         } else {
             st.currentRound = OprfKeyGen.Round.TWO;
             st.shareCommitments = new BabyJubJub.Affine[](numPeers);
-            emit OprfKeyGen.SecretGenRound2(oprfKeyId, st.generatedEpoch);
+            emit SecretGenRound2(oprfKeyId, st.generatedEpoch);
         }
     }
 
@@ -843,9 +806,9 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
         st.currentRound = OprfKeyGen.Round.THREE;
         if (st.generatedEpoch == 0) {
-            emit OprfKeyGen.SecretGenRound3(oprfKeyId);
+            emit SecretGenRound3(oprfKeyId);
         } else {
-            emit OprfKeyGen.ReshareRound3(oprfKeyId, st.lagrangeCoeffs, st.generatedEpoch);
+            emit ReshareRound3(oprfKeyId, st.lagrangeCoeffs, st.generatedEpoch);
         }
     }
 

@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
+import {IUnreleasedOprfKeyRegistryV2} from "../src/IUnreleasedOprfKeyRegistryV2.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 import {UnreleasedOprfKeyRegistryV2} from "../src/UnreleasedOprfKeyRegistryV2.sol";
@@ -47,12 +49,12 @@ contract OprfKeyRegistryV2Test is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit UnreleasedOprfKeyRegistryV2.KeyGenStuckReported(oprfKeyId, alice, OprfKeyGen.Round.ONE);
+        emit IUnreleasedOprfKeyRegistryV2.KeyGenStuckReported(oprfKeyId, alice, OprfKeyGen.Round.ONE);
         oprfKeyRegistry.reportKeyGenStuck(oprfKeyId);
 
         // Bob tries to add his contribution but the round is stuck
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 4));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.WrongRound.selector, 4));
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
     }
 
@@ -64,7 +66,7 @@ contract OprfKeyRegistryV2Test is Test {
 
         // Non-participant tries to report stuck
         vm.prank(address(0xdeadbeef));
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.NotAParticipant.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.NotAParticipant.selector));
         oprfKeyRegistry.reportKeyGenStuck(oprfKeyId);
     }
 
@@ -74,7 +76,7 @@ contract OprfKeyRegistryV2Test is Test {
         vm.prank(alice);
 
         // Key gen never started
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, oprfKeyId));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.UnknownId.selector, oprfKeyId));
         oprfKeyRegistry.reportKeyGenStuck(oprfKeyId);
     }
 
@@ -89,7 +91,7 @@ contract OprfKeyRegistryV2Test is Test {
 
         // Bob tries to report stuck but the round is already stuck
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 4));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.WrongRound.selector, 4));
         oprfKeyRegistry.reportKeyGenStuck(oprfKeyId);
     }
 }

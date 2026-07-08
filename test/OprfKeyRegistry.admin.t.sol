@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {OprfKeyGen} from "../src/OprfKeyGen.sol";
+import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
@@ -43,11 +43,11 @@ contract OprfKeyRegistryTest is Test {
         peerAddresses[1] = bob;
         peerAddresses[2] = carol;
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(0, address(0), alice);
+        emit IOprfKeyRegistry.OprfPeerChanged(0, address(0), alice);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(1, address(0), bob);
+        emit IOprfKeyRegistry.OprfPeerChanged(1, address(0), bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(2, address(0), carol);
+        emit IOprfKeyRegistry.OprfPeerChanged(2, address(0), carol);
         oprfKeyRegistry.registerOprfPeers(peerAddresses);
     }
 
@@ -91,11 +91,11 @@ contract OprfKeyRegistryTest is Test {
         // check that not ready
         assert(!oprfKeyRegistryTest.isContractReady());
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(0, address(0), alice);
+        emit IOprfKeyRegistry.OprfPeerChanged(0, address(0), alice);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(1, address(0), bob);
+        emit IOprfKeyRegistry.OprfPeerChanged(1, address(0), bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(2, address(0), carol);
+        emit IOprfKeyRegistry.OprfPeerChanged(2, address(0), carol);
         oprfKeyRegistryTest.registerOprfPeers(peerAddresses);
 
         // check that ready after call
@@ -119,7 +119,7 @@ contract OprfKeyRegistryTest is Test {
 
         // check that taceo is not a participant
         vm.prank(taceoAdmin);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.NotAParticipant.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.NotAParticipant.selector));
         oprfKeyRegistryTest.getPartyIdForParticipant(taceoAdmin);
         vm.stopPrank();
     }
@@ -163,7 +163,7 @@ contract OprfKeyRegistryTest is Test {
 
         // check that not ready
         assert(!oprfKeyRegistryTest.isContractReady());
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.PartiesNotDistinct.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.PartiesNotDistinct.selector));
         oprfKeyRegistryTest.registerOprfPeers(peerAddresses);
     }
 
@@ -188,11 +188,11 @@ contract OprfKeyRegistryTest is Test {
 
         // update
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(0, alice, bob);
+        emit IOprfKeyRegistry.OprfPeerChanged(0, alice, bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(1, bob, carol);
+        emit IOprfKeyRegistry.OprfPeerChanged(1, bob, carol);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(2, carol, taceoAdmin);
+        emit IOprfKeyRegistry.OprfPeerChanged(2, carol, taceoAdmin);
         oprfKeyRegistry.registerOprfPeers(peerAddresses);
 
         vm.prank(bob);
@@ -208,7 +208,7 @@ contract OprfKeyRegistryTest is Test {
         vm.stopPrank();
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.NotAParticipant.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.NotAParticipant.selector));
         oprfKeyRegistry.getPartyIdForParticipant(alice);
         vm.stopPrank();
 
@@ -218,7 +218,7 @@ contract OprfKeyRegistryTest is Test {
         peerAddresses2[2] = alice;
 
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.OprfPeerChanged(2, taceoAdmin, alice);
+        emit IOprfKeyRegistry.OprfPeerChanged(2, taceoAdmin, alice);
         oprfKeyRegistry.registerOprfPeers(peerAddresses2);
 
         vm.prank(bob);
@@ -249,7 +249,7 @@ contract OprfKeyRegistryTest is Test {
         peerAddressesWrong[0] = alice;
         peerAddressesWrong[1] = bob;
 
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnexpectedAmountPeers.selector, 3));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.UnexpectedAmountPeers.selector, 3));
         oprfKeyRegistryTest.registerOprfPeers(peerAddressesWrong);
     }
 
@@ -258,18 +258,18 @@ contract OprfKeyRegistryTest is Test {
         vm.startPrank(taceoAdmin);
         // register another admin
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenAdminRegistered(alice);
+        emit IOprfKeyRegistry.KeyGenAdminRegistered(alice);
         oprfKeyRegistry.addKeyGenAdmin(alice);
         assertEq(2, oprfKeyRegistry.amountKeygenAdmins());
 
         // revoke taceo
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenAdminRevoked(taceoAdmin);
+        emit IOprfKeyRegistry.KeyGenAdminRevoked(taceoAdmin);
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
 
         // try start key-gen as taceo
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.OnlyAdmin.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.OnlyAdmin.selector));
         oprfKeyRegistry.initKeyGen(oprfKeyId);
         vm.stopPrank();
 
@@ -282,7 +282,7 @@ contract OprfKeyRegistryTest is Test {
     function testRevokeLastAdmin() public {
         vm.startPrank(taceoAdmin);
         // register another admin
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.LastAdmin.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.LastAdmin.selector));
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
         vm.stopPrank();
@@ -309,7 +309,7 @@ contract OprfKeyRegistryTest is Test {
     function testChangeVerifierContract() public {
         address newAddress = address(0x42);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.VerifierContractChanged(address(verifierKeyGen), newAddress);
+        emit IOprfKeyRegistry.VerifierContractChanged(address(verifierKeyGen), newAddress);
         oprfKeyRegistry.changeVerifierContract(newAddress);
     }
 
@@ -323,20 +323,20 @@ contract OprfKeyRegistryTest is Test {
     function testInitKeyGenResubmit() public {
         vm.prank(taceoAdmin);
         oprfKeyRegistry.initKeyGen(42);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.AlreadySubmitted.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.AlreadySubmitted.selector));
         vm.prank(taceoAdmin);
         oprfKeyRegistry.initKeyGen(42);
     }
 
     function testInitReshareBeforeKeyGen() public {
         vm.prank(taceoAdmin);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.UnknownId.selector, 42));
         oprfKeyRegistry.initReshare(42);
     }
 
     function testInitKeyGenWithZero() public {
         vm.prank(taceoAdmin);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.BadContribution.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.BadContribution.selector));
         oprfKeyRegistry.initKeyGen(0);
     }
 
@@ -344,7 +344,7 @@ contract OprfKeyRegistryTest is Test {
         uint160 oprfKeyId = 42;
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.UnknownId.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.UnknownId.selector, 42));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
     }

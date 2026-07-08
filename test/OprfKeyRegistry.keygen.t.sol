@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
 import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 import {Test} from "forge-std/Test.sol";
@@ -48,7 +49,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
     function initKeyGen(uint160 oprfKeyId) internal {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.SecretGenRound1(oprfKeyId, THRESHOLD);
+        emit IOprfKeyRegistry.SecretGenRound1(oprfKeyId, THRESHOLD);
         oprfKeyRegistry.initKeyGen(oprfKeyId);
         vm.stopPrank();
     }
@@ -67,13 +68,13 @@ contract OprfKeyRegistryKeyGenTest is Test {
         initKeyGen(oprfKeyId);
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.aliceKeyGenRound1Contribution());
         vm.stopPrank();
 
@@ -95,7 +96,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         keyGenRound1Contributions(oprfKeyId);
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
         vm.stopPrank();
         abortKeyGen(oprfKeyId);
@@ -118,7 +119,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         keyGenRound2Contributions(oprfKeyId);
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 3, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 0, 3, 0);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
         abortKeyGen(oprfKeyId);
@@ -131,7 +132,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.WrongRound.selector, 1));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
 
@@ -149,10 +150,10 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyDeletion(oprfKeyId);
+        emit IOprfKeyRegistry.KeyDeletion(oprfKeyId);
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.prank(taceoAdmin);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, oprfKeyId));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.DeletedId.selector, oprfKeyId));
         oprfKeyRegistry.abortKeyGen(oprfKeyId);
         vm.stopPrank();
     }
@@ -163,7 +164,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.WrongRound.selector, 1));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
 
@@ -181,7 +182,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         keyGenRound1Contributions(oprfKeyId);
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 2));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.WrongRound.selector, 2));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
         // finish key-gen
@@ -199,7 +200,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         vm.prank(taceoAdmin);
         // now delete
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 3));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.WrongRound.selector, 3));
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
         // finish key-gen
@@ -236,12 +237,12 @@ contract OprfKeyRegistryKeyGenTest is Test {
         initKeyGen(oprfKeyId);
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.BadContribution.selector));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.BadContribution.selector));
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
         vm.stopPrank();
     }
@@ -253,7 +254,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
         vm.stopPrank();
 
@@ -268,7 +269,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
         initKeyGen(oprfKeyId);
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
         vm.stopPrank();
 
@@ -278,22 +279,22 @@ contract OprfKeyRegistryKeyGenTest is Test {
         // this works now
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, bobReplay);
         vm.stopPrank();
 
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.SecretGenRound2(oprfKeyId, 0);
+        emit IOprfKeyRegistry.SecretGenRound2(oprfKeyId, 0);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.carolKeyGenRound1Contribution());
         vm.stopPrank();
 
         // Bob sends his proof
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
         vm.stopPrank();
 
@@ -307,21 +308,21 @@ contract OprfKeyRegistryKeyGenTest is Test {
     function keyGenRound1Contributions(uint160 oprfKeyId) internal {
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 0, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.aliceKeyGenRound1Contribution());
         vm.stopPrank();
 
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.SecretGenRound2(oprfKeyId, 0);
+        emit IOprfKeyRegistry.SecretGenRound2(oprfKeyId, 0);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 2, 1, 0);
         oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.carolKeyGenRound1Contribution());
         vm.stopPrank();
     }
@@ -329,21 +330,21 @@ contract OprfKeyRegistryKeyGenTest is Test {
     function keyGenRound2Contributions(uint160 oprfKeyId) internal {
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
         vm.stopPrank();
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 2, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 0, 2, 0);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.aliceKeyGenRound2Contribution());
         vm.stopPrank();
 
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.SecretGenRound3(oprfKeyId);
+        emit IOprfKeyRegistry.SecretGenRound3(oprfKeyId);
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 2, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 2, 2, 0);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.carolKeyGenRound2Contribution());
         vm.stopPrank();
     }
@@ -351,21 +352,21 @@ contract OprfKeyRegistryKeyGenTest is Test {
     function keyGenRound3Contributions(uint160 oprfKeyId) private {
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 0, 3, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 0, 3, 0);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 1, 3, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 3, 0);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
 
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.SecretGenFinalize(oprfKeyId, 0);
+        emit IOprfKeyRegistry.SecretGenFinalize(oprfKeyId, 0);
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenConfirmation(oprfKeyId, 2, 3, 0);
+        emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 2, 3, 0);
         oprfKeyRegistry.addRound3Contribution(oprfKeyId);
         vm.stopPrank();
     }
@@ -386,17 +387,17 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
     function checkGeneratedIsDeleted(uint160 oprfKeyId) internal {
         // check that the key is deleted
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.DeletedId.selector, 42));
         oprfKeyRegistry.getOprfPublicKey(oprfKeyId);
 
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.DeletedId.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.DeletedId.selector, 42));
         oprfKeyRegistry.getOprfPublicKeyAndEpoch(oprfKeyId);
     }
 
     function abortKeyGen(uint160 oprfKeyId) internal {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyGenAbort(oprfKeyId);
+        emit IOprfKeyRegistry.KeyGenAbort(oprfKeyId);
         oprfKeyRegistry.abortKeyGen(oprfKeyId);
         vm.stopPrank();
     }
@@ -404,7 +405,7 @@ contract OprfKeyRegistryKeyGenTest is Test {
     function deleteOprfKey(uint160 oprfKeyId) internal {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
-        emit OprfKeyGen.KeyDeletion(oprfKeyId);
+        emit IOprfKeyRegistry.KeyDeletion(oprfKeyId);
         oprfKeyRegistry.deleteOprfPublicKey(oprfKeyId);
         vm.stopPrank();
     }

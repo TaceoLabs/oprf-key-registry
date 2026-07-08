@@ -2,19 +2,20 @@
 pragma solidity ^0.8.20;
 
 import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
+import {IOprfKeyRegistry, IVerifierKeyGen13, PUBLIC_INPUT_LENGTH_KEYGEN_13} from "../src/IOprfKeyRegistry.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
-import {OprfKeyRegistry, IVerifierKeyGen13, PUBLIC_INPUT_LENGTH_KEYGEN_13} from "../src/OprfKeyRegistry.sol";
+import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 
 uint256 constant INVALID_PROOF = 43;
 uint256 constant WRONG_ROUND_LOAD_PEER_PUBLIC_KEYS = 44;
 
 contract TestOprfKeyRegistry is OprfKeyRegistry {
     function emitDeleteEvent(uint160 oprfKeyId) public {
-        emit OprfKeyGen.KeyDeletion(oprfKeyId);
+        emit IOprfKeyRegistry.KeyDeletion(oprfKeyId);
     }
 
     function emitSecretGenFinalize(uint160 oprfKeyId, uint32 epoch) public {
-        emit OprfKeyGen.SecretGenFinalize(oprfKeyId, epoch);
+        emit IOprfKeyRegistry.SecretGenFinalize(oprfKeyId, epoch);
     }
 
     function loadPeerPublicKeysForProducers(uint160 oprfKeyId)

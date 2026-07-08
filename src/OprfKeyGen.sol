@@ -69,28 +69,6 @@ library OprfKeyGen {
         Round currentRound;
     }
 
-    // Event that will be emitted during transaction of key-gens. This should signal the MPC-nodes that their transaction was successfully registered.
-    event KeyGenConfirmation(uint160 indexed oprfKeyId, uint16 indexed partyId, uint8 round, uint32 epoch);
-    // events for key-gen
-    event SecretGenRound1(uint160 indexed oprfKeyId, uint256 threshold);
-    event SecretGenRound2(uint160 indexed oprfKeyId, uint32 indexed epoch);
-    event SecretGenRound3(uint160 indexed oprfKeyId);
-    event SecretGenFinalize(uint160 indexed oprfKeyId, uint32 indexed epoch);
-    // events for reshare
-    event ReshareRound1(uint160 indexed oprfKeyId, uint256 threshold, uint32 indexed epoch);
-    event ReshareRound3(uint160 indexed oprfKeyId, uint256[] lagrange, uint32 indexed epoch);
-    // event to delete created key
-    event KeyDeletion(uint160 indexed oprfKeyId);
-    // abort currently running key-gen
-    event KeyGenAbort(uint160 indexed oprfKeyId);
-    // admin events
-    event KeyGenAdminRevoked(address indexed admin);
-    event KeyGenAdminRegistered(address indexed admin);
-    event NotEnoughProducers(uint160 indexed oprfKeyId);
-    event VerifierContractChanged(address indexed oldContract, address indexed newContract);
-    // peer events
-    event OprfPeerChanged(uint16 indexed partyId, address indexed oldPeer, address indexed newPeer);
-
     /// @notice Initializes the internal state for a new OPRF key-generation process.
     ///
     /// @dev Resets all round-specific data structures and prepares the state for Round 1. Allocates fresh storage for all rounds based on the provided numPeers.

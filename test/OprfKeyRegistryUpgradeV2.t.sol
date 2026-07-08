@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
+import {IUnreleasedOprfKeyRegistryV2} from "../src/IUnreleasedOprfKeyRegistryV2.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
 import {UnreleasedOprfKeyRegistryV2} from "../src/UnreleasedOprfKeyRegistryV2.sol";
@@ -58,7 +60,7 @@ contract OprfKeyRegistryUpgradeV2Test is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit UnreleasedOprfKeyRegistryV2.KeyGenStuckReported(oprfKeyId, alice, OprfKeyGen.Round.ONE);
+        emit IUnreleasedOprfKeyRegistryV2.KeyGenStuckReported(oprfKeyId, alice, OprfKeyGen.Round.ONE);
         oprfKeyRegistryV2.reportKeyGenStuck(oprfKeyId);
 
         OprfKeyRegistryV3Mock implementationV3 = new OprfKeyRegistryV3Mock();
@@ -73,7 +75,7 @@ contract OprfKeyRegistryUpgradeV2Test is Test {
         assertEq(oprfKeyRegistryV3.newFeature(), 7);
 
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(OprfKeyRegistry.WrongRound.selector, 4));
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.WrongRound.selector, 4));
         oprfKeyRegistryV3.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
     }
 }
