@@ -147,6 +147,33 @@ abort-key-gen *args:
 
 [group('contract')]
 [working-directory("script")]
+transfer-ownership-dry-run *args:
+    forge script TransferOwnership.s.sol -vvvvv {{ args }}
+
+[group('contract')]
+[working-directory("script")]
+transfer-ownership *args:
+    forge script TransferOwnership.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+
+[group('contract')]
+[working-directory("script")]
+accept-ownership-dry-run *args:
+    forge script AcceptOwnership.s.sol -vvvvv {{ args }}
+
+[group('contract')]
+[working-directory("script")]
+accept-ownership *args:
+    forge script AcceptOwnership.s.sol -vvvvv --broadcast --interactives 1 {{ args }} --rpc-url $RPC_URL
+
+# Dry-run any script as the given Safe and emit a Safe Transaction Builder JSON
+# at broadcast/<Script>/<chain_id>/safe-tx.json, ready to upload via
+# app.safe.global → Transaction Builder → Load batch.
+[group('contract')]
+safe-tx script chain_id safe_addr *args:
+    script/to-safe-tx.sh {{ script }} {{ chain_id }} {{ safe_addr }} -vvv {{ args }} --rpc-url $RPC_URL
+
+[group('contract')]
+[working-directory("script")]
 init-key-gen-dry-run *args:
     forge script InitKeyGen.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
 
