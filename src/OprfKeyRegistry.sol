@@ -122,14 +122,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     //         ADMIN FUNCTIONS
     // ==================================
 
-    /// @notice Revokes an admin's key-generation permissions.
-    ///
-    /// @dev This function is intended as an emergency measure (e.g. key loss).
-    /// In the future, revocation should require threshold authentication.
-    /// Currently, any admin may revoke another admin, meaning a single admin
-    /// can remove all others except the last remaining one.
-    ///
-    /// @param _keygenAdmin The admin address to revoke
+    /// @inheritdoc IOprfKeyRegistry
     function revokeKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized onlyAdmin {
         // if the _keygenAdmin is an admin, we remove them
         if (keygenAdmins[_keygenAdmin]) {
@@ -143,24 +136,14 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
-    /// @notice Updates the key generation verifier contract.
-    ///
-    /// @dev This function does not verify whether the provided address is a valid
-    /// or trusted key generation verifier contract. Use with caution.
-    ///
-    /// @param newKeyGenVerifier The address of the new verifier contract
+    /// @inheritdoc IOprfKeyRegistry
     function changeVerifierContract(address newKeyGenVerifier) public virtual onlyProxy onlyInitialized onlyOwner {
         address oldKeyGenVerifier = keyGenVerifier;
         keyGenVerifier = newKeyGenVerifier;
         emit VerifierContractChanged(oldKeyGenVerifier, newKeyGenVerifier);
     }
 
-    /// @notice Grants key-generation admin permissions to an address.
-    ///
-    /// @dev In the future, adding admins should require threshold authentication.
-    /// Currently, any existing admin may add another admin.
-    ///
-    /// @param _keygenAdmin The admin address to register
+    /// @inheritdoc IOprfKeyRegistry
     function addKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized adminOrOwner {
         // if the _keygenAdmin is not yet an admin, we add them
         if (!keygenAdmins[_keygenAdmin]) {
@@ -170,15 +153,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
-    /// @notice Registers the OPRF peers with their addresses and assigns party IDs.
-    /// Can only be called by the contract owner. Re-registering requires that
-    /// existing peers keep their party ID.
-    ///
-    /// @dev Ensures the number of addresses matches `numPeers` and that all addresses are distinct.
-    /// Deletes any previous peer registrations and initializes the new ones. Sets
-    /// `isContractReady` to true once registration completes.
-    ///
-    /// @param _peerAddresses An array of OPRF peer addresses to register.
+    /// @inheritdoc IOprfKeyRegistry
     function registerOprfPeers(address[] calldata _peerAddresses) public virtual onlyProxy onlyInitialized onlyOwner {
         if (_peerAddresses.length != numPeers) revert UnexpectedAmountPeers(numPeers);
         // check that addresses are distinct
@@ -210,13 +185,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         isContractReady = true;
     }
 
-    /// @notice Initializes a new key-generation process with the given OPRF key ID.
-    /// Reverts if the identifier is zero, already used, or deleted.
-    ///
-    /// @dev Uses the provided `oprfKeyId` as the unique identifier. Checks storage
-    /// to prevent resubmission or re-initialization. Emits the Round1 event upon success.
-    ///
-    /// @param oprfKeyId The unique identifier for the OPRF public key.
+    /// @inheritdoc IOprfKeyRegistry
     function initKeyGen(uint160 oprfKeyId) public virtual onlyProxy isReady onlyAdmin {
         if (oprfKeyId == 0) revert BadContribution();
         // Check that this oprfKeyId was not used already
@@ -236,15 +205,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         emit SecretGenRound1(oprfKeyId, threshold);
     }
 
-    /// @notice Initializes a reshare process for a given OPRF key ID.
-    /// Can be used to re-randomize MPC shares, replace parties, or regenerate shares
-    /// if a node loses access. Reuses the previous state but clears old key-generation data.
-    ///
-    /// @dev Checks that the key ID exists and is not deleted. Prevents resubmission if
-    /// the reshare is already started. Initializes the reshare state and increments the epoch.
-    /// Emits the Round1 event upon success.
-    ///
-    /// @param oprfKeyId The unique identifier for the OPRF public key.
+    /// @inheritdoc IOprfKeyRegistry
     function initReshare(uint160 oprfKeyId) public virtual onlyProxy isReady onlyAdmin {
         // Get the key-gen state for this key and reset everything
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
@@ -265,14 +226,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         emit ReshareRound1(oprfKeyId, threshold, st.generatedEpoch);
     }
 
-    /// @notice Deletes an OPRF public key and all associated state.
-    /// Can only delete keys that exist and are not currently in a key-generation or reshare process.
-    /// If a process is stuck, call `abortKeyGen` first before deleting.
-    ///
-    /// @dev Clears both the registered public key and the running key-gen state.
-    /// Emits `KeyDeletion` upon success.
-    ///
-    /// @param oprfKeyId The unique identifier for the OPRF public key.
+    /// @inheritdoc IOprfKeyRegistry
     function deleteOprfPublicKey(uint160 oprfKeyId) public virtual onlyProxy isReady onlyAdmin {
         // check whether this key was registered
         OprfKeyGen.RegisteredOprfPublicKey storage oprfPublicKey = oprfKeyRegistry[oprfKeyId];
@@ -293,12 +247,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
-    /// @notice Aborts an in-progress OPRF key-generation or reshare process.
-    /// Call `initKeyGen` or `initReshare` afterwards to restart the process if needed.
-    ///
-    /// @dev Resets the key-gen state to allow for a fresh start. Emits `KeyGenAbort`.
-    ///
-    /// @param oprfKeyId The unique identifier for the OPRF public key.
+    /// @inheritdoc IOprfKeyRegistry
     function abortKeyGen(uint160 oprfKeyId) public virtual onlyProxy isReady onlyAdmin {
         // Get the key-gen state for this key and check that it actually exists
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
@@ -316,9 +265,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     //        OPRF Peer FUNCTIONS
     // ==================================
 
-    /// @notice Adds a Round 1 contribution to the key generation process. Only callable by registered OPRF peers.
-    /// @param oprfKeyId The unique identifier for the key-gen.
-    /// @param data The Round 1 contribution data. See `OprfKeyGen.Round1Contribution` for details.
+    /// @inheritdoc IOprfKeyRegistry
     function addRound1KeyGenContribution(uint160 oprfKeyId, OprfKeyGen.Round1Contribution calldata data)
         public
         virtual
@@ -345,11 +292,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         emit KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
     }
 
-    /// @notice Adds a Round 1 contribution to the re-sharing process. Only callable by registered OPRF peers. This method does some more work than the basic key-gen.
-    /// We need threshold many PRODUCERS, meaning those will do the re-sharing. Nevertheless, all other parties need to participate as CONSUMERS and provide an ephemeral public-key so that the producers can create the new shares for them, so at least round 1 needs contributions by all nodes.
-    ///
-    /// @param oprfKeyId The unique identifier for the key-gen.
-    /// @param data The Round 1 contribution data. See `OprfKeyGen.Round1Contribution` for details.
+    /// @inheritdoc IOprfKeyRegistry
     function addRound1ReshareContribution(uint160 oprfKeyId, OprfKeyGen.Round1Contribution calldata data)
         public
         virtual
@@ -409,11 +352,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         emit KeyGenConfirmation(oprfKeyId, partyId, 1, st.generatedEpoch);
     }
 
-    /// @notice Adds a Round 2 contribution to the key generation process. Only callable by registered OPRF peers. Is the same for key-gen and reshare, with the small difference with how the commitments for next reshare are computed and that we need less producers for reshare.
-    ///
-    /// @param oprfKeyId The unique identifier for the key-gen.
-    /// @param data The Round 2 contribution data. See `OprfKeyGen.Round2Contribution` for details.
-    /// @dev This internally verifies the Groth16 proof provided in the contribution data to ensure it is constructed correctly.
+    /// @inheritdoc IOprfKeyRegistry
     function addRound2Contribution(uint160 oprfKeyId, OprfKeyGen.Round2Contribution calldata data)
         public
         virtual
@@ -529,10 +468,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         emit KeyGenConfirmation(oprfKeyId, partyId, 2, st.generatedEpoch);
     }
 
-    /// @notice Adds a Round 3 contribution to the key generation process. Only callable by registered OPRF peers. This is exactly the same process for key-gen and reshare because nodes just acknowledge that they received their ciphertexts.
-    ///
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    /// @dev This does not require any calldata, as it is simply an acknowledgment from the peer that is is done.
+    /// @inheritdoc IOprfKeyRegistry
     function addRound3Contribution(uint160 oprfKeyId) public virtual onlyProxy isReady {
         // check that we started the key-gen for this OPRF public-key.
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
@@ -570,8 +506,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     //           HELPER FUNCTIONS
     // ==================================
 
-    /// @notice Checks if the caller is a registered OPRF participant and returns their party ID.
-    /// @return The party ID of the given participant if they are a registered participant.
+    /// @inheritdoc IOprfKeyRegistry
     function getPartyIdForParticipant(address participant) public view virtual isReady onlyProxy returns (uint256) {
         OprfKeyGen.OprfPeer memory peer = addressToPeer[participant];
         if (!peer.isParticipant) revert NotAParticipant();
@@ -584,9 +519,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         return peer.partyId;
     }
 
-    /// @notice Checks if the caller is a registered OPRF participant and returns ALL the ephemeral public keys created in round 1 of the key gen identified by the provided oprfKeyId. This method will be called by the nodes during round 2. The producers will receive all ephemeral public keys in order to encrypt the recreated shares (of the shares). The consumers will receive an empty array - this signals them that they don't need to participate in this round and just wait until the producers are done with this round.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    /// @return The ephemeral public keys generated in round 1 iff a producer. An empty array iff a consumer.
+    /// @inheritdoc IOprfKeyRegistry
     function loadPeerPublicKeysForProducers(uint160 oprfKeyId)
         public
         view
@@ -610,9 +543,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         return _loadPeerPublicKeys(st);
     }
 
-    /// @notice Checks if the caller is a registered OPRF participant and returns only the ephemeral public OF THE PRODUCERS. The producers encrypted all shares in the previous round with DHE, therefore the recipients need the producer's public-key. For simplicity, the producers also call this method to receive the public-keys (including their own).
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    /// @return The ephemeral public keys OF THE PRODUCERS generated in round 1
+    /// @inheritdoc IOprfKeyRegistry
     function loadPeerPublicKeysForConsumers(uint160 oprfKeyId)
         public
         view
@@ -633,9 +564,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         return _loadProducerPeerPublicKeys(st);
     }
 
-    /// @notice Checks if the caller is a registered OPRF participant and returns their Round 2 ciphertexts for the specified key-gen.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    /// @return An array of Round 2 ciphertexts belonging to the caller.
+    /// @inheritdoc IOprfKeyRegistry
     function checkIsParticipantAndReturnRound2Ciphers(uint160 oprfKeyId)
         public
         view
@@ -667,9 +596,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
-    /// @notice Retrieves the specified OPRF public-key.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    /// @return The BabyJubJub element representing the nullifier public key.
+    /// @inheritdoc IOprfKeyRegistry
     function getOprfPublicKey(uint160 oprfKeyId)
         public
         view
@@ -686,9 +613,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         return publicKey;
     }
 
-    /// @notice Retrieves the specified OPRF public-key along with its current epoch.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    /// @return The BabyJubJub element representing the nullifier public key and the current epoch.
+    /// @inheritdoc IOprfKeyRegistry
     function getOprfPublicKeyAndEpoch(uint160 oprfKeyId)
         public
         view
