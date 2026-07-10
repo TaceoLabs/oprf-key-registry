@@ -11,6 +11,11 @@ deploy_verify_flags := "--verify --verifier etherscan --etherscan-api-key $ETHER
 contract-tests:
     forge test
 
+# Regenerate CHANGELOG.md from conventional commits (see cliff.toml)
+[group('release')]
+changelog:
+    npx --yes git-cliff -o CHANGELOG.md
+
 [group('build')]
 show-contract-errors:
     forge inspect src/OprfKeyRegistry.sol:OprfKeyRegistry errors

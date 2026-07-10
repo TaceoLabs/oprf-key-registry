@@ -2,10 +2,10 @@
 pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
-import {OprfKeyRegistry} from "../../src/OprfKeyRegistry.sol";
+import {OprfKeyRegistryV2} from "../../src/OprfKeyRegistryV2.sol";
 
 contract DeployOprfKeyRegistryImplScript is Script {
-    OprfKeyRegistry public oprfKeyRegistry;
+    OprfKeyRegistryV2 public oprfKeyRegistry;
 
     function setUp() public {}
 
@@ -13,9 +13,9 @@ contract DeployOprfKeyRegistryImplScript is Script {
         vm.startBroadcast();
 
         // Deploy implementation
-        OprfKeyRegistry implementation = new OprfKeyRegistry();
+        OprfKeyRegistryV2 implementation = new OprfKeyRegistryV2();
 
         vm.stopBroadcast();
-        console.log("OprfKeyRegistry implementation deployed to:", address(implementation));
+        console.log("OprfKeyRegistryV2 implementation deployed to:", address(implementation));
     }
 }
