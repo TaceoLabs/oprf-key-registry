@@ -6,10 +6,10 @@ import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
-import {IUnreleasedOprfKeyRegistryV2} from "../src/IUnreleasedOprfKeyRegistryV2.sol";
+import {IOprfKeyRegistryV2} from "../src/IOprfKeyRegistryV2.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
-import {UnreleasedOprfKeyRegistryV2} from "../src/UnreleasedOprfKeyRegistryV2.sol";
+import {OprfKeyRegistryV2} from "../src/OprfKeyRegistryV2.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Test} from "forge-std/Test.sol";
@@ -143,11 +143,11 @@ contract OprfKeyRegistryUpgradeTest is Test {
         assertEq(oprfKey.y, Contributions.SHOULD_OPRF_PUBLIC_KEY_Y);
 
         // Now perform upgrade
-        UnreleasedOprfKeyRegistryV2 implementationV2 = new UnreleasedOprfKeyRegistryV2();
+        OprfKeyRegistryV2 implementationV2 = new OprfKeyRegistryV2();
         // upgrade as owner
         OprfKeyRegistry(address(proxy)).upgradeToAndCall(address(implementationV2), "");
         // Wrap proxy with V2 interface
-        UnreleasedOprfKeyRegistryV2 oprfKeyRegistryV2 = UnreleasedOprfKeyRegistryV2(address(proxy));
+        OprfKeyRegistryV2 oprfKeyRegistryV2 = OprfKeyRegistryV2(address(proxy));
 
         // Verify storage was preserved
         BabyJubJub.Affine memory oprfKeyV2 = oprfKeyRegistryV2.getOprfPublicKey(oprfKeyId);
@@ -164,7 +164,7 @@ contract OprfKeyRegistryUpgradeTest is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit IUnreleasedOprfKeyRegistryV2.KeyGenStuckReported(stuckOprfKeyId, alice, OprfKeyGen.Round.ONE);
+        emit IOprfKeyRegistryV2.KeyGenStuckReported(stuckOprfKeyId, alice, OprfKeyGen.Round.ONE);
         oprfKeyRegistryV2.reportKeyGenStuck(stuckOprfKeyId);
         vm.stopPrank();
 
@@ -256,12 +256,12 @@ contract OprfKeyRegistryUpgradeTest is Test {
         IERC165(address(proxy)).supportsInterface(type(IERC165).interfaceId);
 
         // Now perform upgrade
-        UnreleasedOprfKeyRegistryV2 implementationV2 = new UnreleasedOprfKeyRegistryV2();
+        OprfKeyRegistryV2 implementationV2 = new OprfKeyRegistryV2();
         OprfKeyRegistry(address(proxy)).upgradeToAndCall(address(implementationV2), "");
-        UnreleasedOprfKeyRegistryV2 oprfKeyRegistryV2 = UnreleasedOprfKeyRegistryV2(address(proxy));
+        OprfKeyRegistryV2 oprfKeyRegistryV2 = OprfKeyRegistryV2(address(proxy));
 
         assertTrue(oprfKeyRegistryV2.supportsInterface(type(IOprfKeyRegistry).interfaceId));
-        assertTrue(oprfKeyRegistryV2.supportsInterface(type(IUnreleasedOprfKeyRegistryV2).interfaceId));
+        assertTrue(oprfKeyRegistryV2.supportsInterface(type(IOprfKeyRegistryV2).interfaceId));
         assertTrue(oprfKeyRegistryV2.supportsInterface(type(IERC165).interfaceId));
         assertFalse(oprfKeyRegistryV2.supportsInterface(0xffffffff));
     }

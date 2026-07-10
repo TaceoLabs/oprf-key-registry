@@ -4,10 +4,10 @@ pragma solidity ^0.8.20;
 import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
-import {IUnreleasedOprfKeyRegistryV2} from "../src/IUnreleasedOprfKeyRegistryV2.sol";
+import {IOprfKeyRegistryV2} from "../src/IOprfKeyRegistryV2.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
-import {UnreleasedOprfKeyRegistryV2} from "../src/UnreleasedOprfKeyRegistryV2.sol";
+import {OprfKeyRegistryV2} from "../src/OprfKeyRegistryV2.sol";
 import {Test} from "forge-std/Test.sol";
 import {Verifier as VerifierKeyGen13} from "../src/VerifierKeyGen13.sol";
 
@@ -15,7 +15,7 @@ contract OprfKeyRegistryV2Test is Test {
     uint256 public constant THRESHOLD = 2;
     uint256 public constant MAX_PEERS = 3;
 
-    UnreleasedOprfKeyRegistryV2 public oprfKeyRegistry;
+    OprfKeyRegistryV2 public oprfKeyRegistry;
     VerifierKeyGen13 public verifierKeyGen;
     ERC1967Proxy public proxy;
 
@@ -27,12 +27,12 @@ contract OprfKeyRegistryV2Test is Test {
 
     function setUp() public {
         verifierKeyGen = new VerifierKeyGen13();
-        UnreleasedOprfKeyRegistryV2 implementation = new UnreleasedOprfKeyRegistryV2();
+        OprfKeyRegistryV2 implementation = new OprfKeyRegistryV2();
         bytes memory initData = abi.encodeWithSelector(
             OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         proxy = new ERC1967Proxy(address(implementation), initData);
-        oprfKeyRegistry = UnreleasedOprfKeyRegistryV2(address(proxy));
+        oprfKeyRegistry = OprfKeyRegistryV2(address(proxy));
 
         address[] memory peerAddresses = new address[](3);
         peerAddresses[0] = alice;
@@ -49,7 +49,7 @@ contract OprfKeyRegistryV2Test is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit IUnreleasedOprfKeyRegistryV2.KeyGenStuckReported(oprfKeyId, alice, OprfKeyGen.Round.ONE);
+        emit IOprfKeyRegistryV2.KeyGenStuckReported(oprfKeyId, alice, OprfKeyGen.Round.ONE);
         oprfKeyRegistry.reportKeyGenStuck(oprfKeyId);
 
         // Bob tries to add his contribution but the round is stuck

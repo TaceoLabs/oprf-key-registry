@@ -4,14 +4,14 @@ pragma solidity ^0.8.20;
 import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
-import {IUnreleasedOprfKeyRegistryV2} from "../src/IUnreleasedOprfKeyRegistryV2.sol";
+import {IOprfKeyRegistryV2} from "../src/IOprfKeyRegistryV2.sol";
 import {OprfKeyGen} from "../src/OprfKeyGen.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
-import {UnreleasedOprfKeyRegistryV2} from "../src/UnreleasedOprfKeyRegistryV2.sol";
+import {OprfKeyRegistryV2} from "../src/OprfKeyRegistryV2.sol";
 import {Test} from "forge-std/Test.sol";
 import {Verifier as VerifierKeyGen13} from "../src/VerifierKeyGen13.sol";
 
-contract OprfKeyRegistryV3Mock is UnreleasedOprfKeyRegistryV2 {
+contract OprfKeyRegistryV3Mock is OprfKeyRegistryV2 {
     uint256 public newFeature;
 
     function version() public pure returns (string memory) {
@@ -27,7 +27,7 @@ contract OprfKeyRegistryUpgradeV2Test is Test {
     uint256 public constant THRESHOLD = 2;
     uint256 public constant MAX_PEERS = 3;
 
-    UnreleasedOprfKeyRegistryV2 public oprfKeyRegistryV2;
+    OprfKeyRegistryV2 public oprfKeyRegistryV2;
     VerifierKeyGen13 public verifierKeyGen;
     ERC1967Proxy public proxy;
 
@@ -39,12 +39,12 @@ contract OprfKeyRegistryUpgradeV2Test is Test {
 
     function setUp() public {
         verifierKeyGen = new VerifierKeyGen13();
-        UnreleasedOprfKeyRegistryV2 implementationV2 = new UnreleasedOprfKeyRegistryV2();
+        OprfKeyRegistryV2 implementationV2 = new OprfKeyRegistryV2();
         bytes memory initData = abi.encodeWithSelector(
             OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
         );
         proxy = new ERC1967Proxy(address(implementationV2), initData);
-        oprfKeyRegistryV2 = UnreleasedOprfKeyRegistryV2(address(proxy));
+        oprfKeyRegistryV2 = OprfKeyRegistryV2(address(proxy));
 
         address[] memory peerAddresses = new address[](3);
         peerAddresses[0] = alice;
@@ -60,7 +60,7 @@ contract OprfKeyRegistryUpgradeV2Test is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit IUnreleasedOprfKeyRegistryV2.KeyGenStuckReported(oprfKeyId, alice, OprfKeyGen.Round.ONE);
+        emit IOprfKeyRegistryV2.KeyGenStuckReported(oprfKeyId, alice, OprfKeyGen.Round.ONE);
         oprfKeyRegistryV2.reportKeyGenStuck(oprfKeyId);
 
         OprfKeyRegistryV3Mock implementationV3 = new OprfKeyRegistryV3Mock();
