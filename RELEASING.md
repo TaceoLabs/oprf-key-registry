@@ -46,7 +46,7 @@ it serves as the reference for storage-layout validation of the next version.
 2. Execute the upgrade from the proxy owner. Set `OPRF_KEY_REGISTRY_PROXY` and
    `OPRF_KEY_REGISTRY_NEW_IMPL`, then either run `just upgrade-oprf-key-registry` directly, or,
    when the owner is a Safe, generate a Transaction Builder batch with
-   `just safe-tx deploy/UpgradeOprfKeyRegistry.s.sol <chain_id> <safe_addr>` and upload it via
+   `just safe-tx script/deploy/UpgradeOprfKeyRegistry.s.sol <chain_id> <safe_addr>` and upload it via
    app.safe.global.
 3. Verify the new implementation on the block explorer and check the proxy reports the new
    version (e.g. `supportsInterface` for v2+).
