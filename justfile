@@ -7,15 +7,6 @@ rpc_flags := "--rpc-url $RPC_URL"
 live_flags := "--broadcast --interactives 1"
 deploy_verify_flags := "--verify --verifier etherscan --etherscan-api-key $ETHERSCAN_API_KEY"
 
-[group('build')]
-export-contract-abi:
-    forge build --silent && jq '.abi' out/OprfKeyRegistry.sol/OprfKeyRegistry.json > ../oprf-types/OprfKeyRegistry.json
-    cp out/VerifierKeyGen13.sol/Verifier.json ../oprf-test-utils/contracts/Verifier.13.json
-    cp out/VerifierKeyGen25.sol/Verifier.json ../oprf-test-utils/contracts/Verifier.25.json
-    cp out/BabyJubJub.sol/BabyJubJub.json ../oprf-test-utils/contracts/BabyJubJub.json
-    cp out/TestOprfKeyRegistry.sol/TestOprfKeyRegistry.json ../oprf-test-utils/contracts
-    cp out/ERC1967Proxy.sol/ERC1967Proxy.json ../oprf-test-utils/contracts
-
 [group('test')]
 contract-tests:
     forge test
@@ -167,6 +158,7 @@ accept-ownership *args:
 
 # Dry-run any script as the given Safe and emit a Safe Transaction Builder JSON
 # at broadcast/<Script>/<chain_id>/safe-tx.json, ready to upload via
+
 # app.safe.global → Transaction Builder → Load batch.
 [group('contract')]
 safe-tx script chain_id safe_addr *args:
