@@ -6,11 +6,39 @@ All notable changes to this project will be documented in this file.
 
 ### ⛰️ Features
 
-- Added changeVerifierContract method (#34) ([3c2a8b6](https://github.com/TaceoLabs/oprf-key-registry/commit/3c2a8b6c3e12f204d2ab96124941f39d6ca76097))
 - Allow nodes to report key gen stuck (#41) ([2422112](https://github.com/TaceoLabs/oprf-key-registry/commit/24221126014cc12fb569e9ca5180247552a46668))
 - Added ERC165 support for key-registry ([4d291d4](https://github.com/TaceoLabs/oprf-key-registry/commit/4d291d40e49cc56dcd9e6140589940f5444d01e3))
 - Added state getters to interface for v1 ([1a2decb](https://github.com/TaceoLabs/oprf-key-registry/commit/1a2decbfb986f02a1122237a9f805e67f4513912))
 - Add helpers to v2 contract for peer retrieval ([936bd43](https://github.com/TaceoLabs/oprf-key-registry/commit/936bd433b6f9e9d309482ee20c5007215339e7dc))
+
+### 🚜 Refactor
+
+- Moved interfaces to dedicated file ([6f038bb](https://github.com/TaceoLabs/oprf-key-registry/commit/6f038bb25d6aa65455e5a8ff67251f59e1f0b036))
+
+### 🏗️ Build
+
+- Added change verifier script and just commands (#36) ([93e4f28](https://github.com/TaceoLabs/oprf-key-registry/commit/93e4f28ac48791be0eb28da16fb2e114bfe3add6))
+- Bump actions/setup-node from 4 to 6 (#45) ([5eba78a](https://github.com/TaceoLabs/oprf-key-registry/commit/5eba78ae4ba2469f6d480cf0f2a19a201cc8e46f))
+- Bump actions/checkout from 5 to 6 (#46) ([5fb6b50](https://github.com/TaceoLabs/oprf-key-registry/commit/5fb6b50eee5447626a41951b7a2bfdb332c0ac30))
+- Bump actions/checkout from 6 to 7 (#49) ([e94ee7f](https://github.com/TaceoLabs/oprf-key-registry/commit/e94ee7ffba0a798469ba64f36463af44f8640998))
+- Add scripts for Safe:Wallet interaction (#42) ([b4b2347](https://github.com/TaceoLabs/oprf-key-registry/commit/b4b234797947a58ad32d8cbb4ff888a4b3db7780))
+- Rename v2 contracts ([26ba5ee](https://github.com/TaceoLabs/oprf-key-registry/commit/26ba5ee7c07982f3b128abb15e763a786f4decdc))
+
+### 📚 Documentation
+
+- Add contract audits (#39) ([7a4ee8b](https://github.com/TaceoLabs/oprf-key-registry/commit/7a4ee8b66d2dbe44cfd559dd7cc6146d627c31a3))
+- Added docs for unreleased v2 ([cae0a17](https://github.com/TaceoLabs/oprf-key-registry/commit/cae0a1739780b3fe136d4fcadeea5d2bfa194aa1))
+- Use inheritdocs (#52) ([ddc5060](https://github.com/TaceoLabs/oprf-key-registry/commit/ddc50600b720c02e535cbf67ad0ea70f04b3a1d2))
+
+### 🧪 Testing
+
+- Add test for ERC165 support ([56d42d9](https://github.com/TaceoLabs/oprf-key-registry/commit/56d42d9c249aa21c72f5841a47366a5a6d7584fd))
+
+## [1.0.0] - 2026-02-27
+
+### ⛰️ Features
+
+- Added changeVerifierContract method (#34) ([3c2a8b6](https://github.com/TaceoLabs/oprf-key-registry/commit/3c2a8b6c3e12f204d2ab96124941f39d6ca76097))
 
 ### 🐛 Bug Fixes
 
@@ -22,7 +50,6 @@ All notable changes to this project will be documented in this file.
 
 - [**breaking**] Remove the storage gap from key-registry ([b16376c](https://github.com/TaceoLabs/oprf-key-registry/commit/b16376caecd6ccc0b904bdadc8164b4e8c90ad03))
 - [**breaking**] Removed the babyjubjub lib and extracted in dedicated lib (#37) ([0042884](https://github.com/TaceoLabs/oprf-key-registry/commit/00428849d269192703e0901145a2723e82b34f1c))
-- Moved interfaces to dedicated file ([6f038bb](https://github.com/TaceoLabs/oprf-key-registry/commit/6f038bb25d6aa65455e5a8ff67251f59e1f0b036))
 
 ### 🏗️ Build
 
@@ -30,24 +57,15 @@ All notable changes to this project will be documented in this file.
 - Added justfile ([090efa5](https://github.com/TaceoLabs/oprf-key-registry/commit/090efa5e0ca46590bb879432164e1eec81326854))
 - Added deploy and upgrade proxy scripts ([b8e6396](https://github.com/TaceoLabs/oprf-key-registry/commit/b8e63964230536e15fbcd6a41addf8fbf3d39029))
 - Added two just commands (#33) ([e387586](https://github.com/TaceoLabs/oprf-key-registry/commit/e387586d3850927b77c6ddbd36ef6180f4996eaf))
-- Added change verifier script and just commands (#36) ([93e4f28](https://github.com/TaceoLabs/oprf-key-registry/commit/93e4f28ac48791be0eb28da16fb2e114bfe3add6))
-- Bump actions/setup-node from 4 to 6 (#45) ([5eba78a](https://github.com/TaceoLabs/oprf-key-registry/commit/5eba78ae4ba2469f6d480cf0f2a19a201cc8e46f))
-- Bump actions/checkout from 5 to 6 (#46) ([5fb6b50](https://github.com/TaceoLabs/oprf-key-registry/commit/5fb6b50eee5447626a41951b7a2bfdb332c0ac30))
-- Bump actions/checkout from 6 to 7 (#49) ([e94ee7f](https://github.com/TaceoLabs/oprf-key-registry/commit/e94ee7ffba0a798469ba64f36463af44f8640998))
-- Add scripts for Safe:Wallet interaction (#42) ([b4b2347](https://github.com/TaceoLabs/oprf-key-registry/commit/b4b234797947a58ad32d8cbb4ff888a4b3db7780))
 
 ### 📚 Documentation
 
 - Update Readme (#29) ([e3269dd](https://github.com/TaceoLabs/oprf-key-registry/commit/e3269dd040aca0352271753233f2bd8e8a4a9d96))
-- Add contract audits (#39) ([7a4ee8b](https://github.com/TaceoLabs/oprf-key-registry/commit/7a4ee8b66d2dbe44cfd559dd7cc6146d627c31a3))
-- Added docs for unreleased v2 ([cae0a17](https://github.com/TaceoLabs/oprf-key-registry/commit/cae0a1739780b3fe136d4fcadeea5d2bfa194aa1))
-- Use inheritdocs (#52) ([ddc5060](https://github.com/TaceoLabs/oprf-key-registry/commit/ddc50600b720c02e535cbf67ad0ea70f04b3a1d2))
 
 ### 🧪 Testing
 
 - Add wrong-round event for key-registry-mock (#26) ([2837db7](https://github.com/TaceoLabs/oprf-key-registry/commit/2837db7863a6dd85e9605d7561952432851b9e9e))
 - Add finalize_event for mock contract (#27) ([895ad65](https://github.com/TaceoLabs/oprf-key-registry/commit/895ad65957d3f83f8ec54fdfc03ff941e9affd1b))
-- Add test for ERC165 support ([56d42d9](https://github.com/TaceoLabs/oprf-key-registry/commit/56d42d9c249aa21c72f5841a47366a5a6d7584fd))
 
 ## [1.0.0-rc.1] - 2026-02-10
 
