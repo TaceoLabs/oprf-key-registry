@@ -179,6 +179,16 @@ init-key-gen-dry-run *args:
 init-key-gen *args:
     forge script InitKeyGen.s.sol {{ trace_flags }} {{ live_flags }} {{ args }} {{ rpc_flags }}
 
+[group('contract')]
+[working-directory("script")]
+init-reshare-dry-run *args:
+    forge script InitReshare.s.sol {{ trace_flags }} {{ args }} {{ rpc_flags }}
+
+[group('contract')]
+[working-directory("script")]
+init-reshare *args:
+    forge script InitReshare.s.sol {{ trace_flags }} {{ live_flags }} {{ args }} {{ rpc_flags }}
+
 [group('anvil')]
 [working-directory("script/deploy")]
 deploy-oprf-key-registry-with-deps-anvil:
