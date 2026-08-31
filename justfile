@@ -167,7 +167,7 @@ accept-ownership *args:
 # app.safe.global → Transaction Builder → Load batch.
 [group('contract')]
 safe-tx script chain_id safe_addr *args:
-    script/to-safe-tx.sh {{ script }} {{ chain_id }} {{ safe_addr }} -vvv {{ args }} --rpc-url $RPC_URL
+    script/to-safe-tx.sh {{ script }} {{ chain_id }} {{ safe_addr }} -vvvvv {{ args }} --rpc-url $RPC_URL
 
 [group('contract')]
 [working-directory("script")]
