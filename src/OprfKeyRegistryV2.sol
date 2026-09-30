@@ -18,6 +18,12 @@ import {IOprfKeyRegistryV2} from "./IOprfKeyRegistryV2.sol";
 /// - Adds `isParticipant(address addr)`. Returns true iff the provided address is in the list of participants
 /// - Bumps `babyjubjub-solidity` to v1.2.0 and overrides `_curveChecks` to use the cheaper Tate-pairing based
 ///   subgroup membership check (`BabyJubJub.isValidPoint`). Accepts exactly the same set of points as before.
+/// - Reworks the per-key round bookkeeping: round data lives in party-id keyed mappings and submissions are
+///   tracked in bitmasks appended to `OprfKeyGenState`. Nothing is zeroed or re-allocated between runs anymore,
+///   which removes most of the storage cost of `initKeyGen`/`initReshare`, round 1 and the finalizing round 3.
+///   The legacy array fields stay in place (storage layout unchanged, see test/OprfKeyRegistryUpgradeFromV2Bytecode.t.sol).
+///   Upgrade prerequisite: key-gens/reshares that are in progress at upgrade time cannot be continued and must be
+///   aborted (`abortKeyGen`) and restarted; finalized keys and their share commitments carry over unchanged.
 /// @custom:oz-upgrades-from OprfKeyRegistry
 contract OprfKeyRegistryV2 is OprfKeyRegistry, IOprfKeyRegistryV2, ERC165 {
     /// @inheritdoc IOprfKeyRegistryV2

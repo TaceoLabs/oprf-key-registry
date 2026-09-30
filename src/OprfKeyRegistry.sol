@@ -110,6 +110,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     ) public virtual initializer {
         __Ownable_init(_owner);
         __Ownable2Step_init();
+        if (_numPeers > OprfKeyGen.MAX_PEERS) revert UnexpectedAmountPeers(_numPeers);
         keygenAdmins[_keygenAdmin] = true;
         amountKeygenAdmins += 1;
         keyGenVerifier = _keyGenVerifierAddress;
@@ -200,7 +201,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             revert AlreadySubmitted();
         }
 
-        st.initKeyGen(numPeers);
+        st.initKeyGen();
         // Emit Round1 event for everyone
         emit SecretGenRound1(oprfKeyId, threshold);
     }
@@ -221,7 +222,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (oprfPublicKey.key.isEmpty()) revert UnknownId(oprfKeyId);
 
         // we need to leave the share commitments to check the peers are using the correct input
-        st.initReshare(numPeers, oprfPublicKey.epoch + 1);
+        st.initReshare(oprfPublicKey.epoch + 1);
         // Emit Round1 event for everyone
         emit ReshareRound1(oprfKeyId, threshold, st.generatedEpoch);
     }
@@ -240,7 +241,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             delete oprfPublicKey.epoch;
 
             // delete the runningKeyGen data as well
-            st.deleteSt(numPeers, peerAddresses);
+            st.deleteSt();
             emit KeyDeletion(oprfKeyId);
         } else {
             revert UnknownId(oprfKeyId);
@@ -257,7 +258,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (st.currentRound == OprfKeyGen.Round.DELETED) {
             revert DeletedId(oprfKeyId);
         }
-        st.reset(numPeers, peerAddresses);
+        st.reset();
         emit KeyGenAbort(oprfKeyId);
     }
 
@@ -282,10 +283,9 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (st.generatedEpoch != 0) {
             revert BadContribution();
         }
-        st.nodeRoles[msg.sender] = OprfKeyGen.KeyGenRole.PRODUCER;
-        st.numProducers += 1;
-        // Add BabyJubJub Elements together and keep running total
-        _addToAggregate(st.keyAggregate, data.commShare);
+        // Add BabyJubJub Elements together and keep running total (the first producer overwrites the stale total)
+        _addToAggregate(st.keyAggregate, data.commShare, st.producerMask == 0);
+        st.producerMask |= OprfKeyGen.bit(partyId);
         // everyone is a producer therefore we wait for numPeers amount producers
         _tryEmitRound2Event(oprfKeyId, numPeers, st);
         // Emit the transaction confirmation
@@ -311,12 +311,9 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check if someone wants to be a consumer
         bool isEmptyCommShare = data.commShare.isEmpty();
         bool isEmptyCommCoeffs = data.commCoeffs == 0;
-        if ((isEmptyCommShare && isEmptyCommCoeffs) || st.numProducers >= threshold) {
-            // both are empty or we already have enough producers
-            st.nodeRoles[msg.sender] = OprfKeyGen.KeyGenRole.CONSUMER;
-            // as a consolation prize we at least refund some storage costs
-            delete st.round1[partyId].commShare;
-            delete st.round1[partyId].commCoeffs;
+        uint256 numProducers = st.numProducersOf();
+        if ((isEmptyCommShare && isEmptyCommCoeffs) || numProducers >= threshold) {
+            // both are empty or we already have enough producers -> consumer, nothing else to record
         } else if (isEmptyCommShare != isEmptyCommCoeffs) {
             // sanity check that someone doesn't try to only commit to one value
             revert BadContribution();
@@ -328,19 +325,15 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             if (!BabyJubJub.isEqual(shouldCommitment, data.commShare)) {
                 revert BadContribution();
             }
-            st.nodeRoles[msg.sender] = OprfKeyGen.KeyGenRole.PRODUCER;
-            st.numProducers += 1;
+            uint64 producerMask = st.producerMask | OprfKeyGen.bit(partyId);
+            st.producerMask = producerMask;
             // check if we are the last producer, then we can compute the lagrange coefficients
-            if (st.numProducers == threshold) {
-                // first get all producer ids
-                // iterating over the peers in that order always returns the ids in ascending order. This is important because the contributions in round 2 will also be in this order.
+            if (numProducers + 1 == threshold) {
+                // first get all producer ids in ascending order. This is important because the contributions in round 2 will also be in this order.
                 uint256[] memory ids = new uint256[](threshold);
                 uint256 counter = 0;
                 for (uint256 i = 0; i < numPeers; ++i) {
-                    address peerAddress = peerAddresses[i];
-                    if (OprfKeyGen.KeyGenRole.PRODUCER == st.nodeRoles[peerAddress]) {
-                        ids[counter++] = addressToPeer[peerAddress].partyId;
-                    }
+                    if (producerMask & OprfKeyGen.bit(i) != 0) ids[counter++] = i;
                 }
                 // then compute the coefficients
                 st.lagrangeCoeffs = BabyJubJub.computeLagrangeCoefficiants(ids, threshold, numPeers);
@@ -368,10 +361,14 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
 
         // return the partyId if sender is really a participant
         uint16 partyId = _internParticipantCheck();
+        uint64 partyBit = OprfKeyGen.bit(partyId);
+        uint64 round2Mask = st.round2Mask;
         // check that this peer did not submit anything for this round
-        if (st.round2Done[partyId]) revert AlreadySubmitted();
+        if (round2Mask & partyBit != 0) revert AlreadySubmitted();
         // check that this peer is a producer for this round
-        if (OprfKeyGen.KeyGenRole.PRODUCER != st.nodeRoles[msg.sender]) revert BadContribution();
+        if (st.producerMask & partyBit == 0) revert BadContribution();
+        // the first round 2 contribution overwrites the stale aggregates of the previous run
+        bool first = round2Mask == 0;
 
         // everything looks good - push the ciphertexts
         // additionally accumulate all commitments for the parties to have the correct commitment during the reshare process.
@@ -381,8 +378,8 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             // for the key-gen we simply accumulate all commitments as the resulting shamir-share should have contributions from all parties -> just add all together
             for (uint256 i = 0; i < numPeers; ++i) {
                 _curveChecks(data.ciphers[i].commitment);
-                _addToAggregate(st.shareCommitments[i], data.ciphers[i].commitment);
-                st.round2[i][partyId] = data.ciphers[i];
+                _addToAggregate(st.shareCommitmentAcc[i], data.ciphers[i].commitment, first);
+                st.round2Data[i][partyId] = data.ciphers[i];
             }
         } else {
             // for the reshare we need to use the lagrange coefficients as here the resulting shamir-share is shared with shamir sharing
@@ -391,12 +388,12 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             for (uint256 i = 0; i < numPeers; ++i) {
                 _curveChecks(data.ciphers[i].commitment);
                 BabyJubJub.Affine memory lagrangeResult = BabyJubJub.scalarMul(lagrange, data.ciphers[i].commitment);
-                _addToAggregate(st.shareCommitments[i], lagrangeResult);
-                st.round2[i][partyId] = data.ciphers[i];
+                _addToAggregate(st.shareCommitmentAcc[i], lagrangeResult, first);
+                st.round2Data[i][partyId] = data.ciphers[i];
             }
         }
         // set the contribution to done
-        st.round2Done[partyId] = true;
+        st.round2Mask = round2Mask | partyBit;
 
         // last step verify the proof and potentially revert if proof fails
 
@@ -419,9 +416,9 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             BabyJubJub.Affine[] memory pubKeyList = _loadPeerPublicKeys(st);
             publicInputs[0] = pubKeyList[partyId].x;
             publicInputs[1] = pubKeyList[partyId].y;
-            publicInputs[2] = st.round1[partyId].commShare.x;
-            publicInputs[3] = st.round1[partyId].commShare.y;
-            publicInputs[4] = st.round1[partyId].commCoeffs;
+            publicInputs[2] = st.round1Data[partyId].commShare.x;
+            publicInputs[3] = st.round1Data[partyId].commShare.y;
+            publicInputs[4] = st.round1Data[partyId].commCoeffs;
             publicInputs[5 + (numPeers * 3)] = threshold - 1;
             // peer keys
             for (uint256 i = 0; i < numPeers; ++i) {
@@ -442,9 +439,9 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             BabyJubJub.Affine[] memory pubKeyList = _loadPeerPublicKeys(st);
             publicInputs[0] = pubKeyList[partyId].x;
             publicInputs[1] = pubKeyList[partyId].y;
-            publicInputs[2] = st.round1[partyId].commShare.x;
-            publicInputs[3] = st.round1[partyId].commShare.y;
-            publicInputs[4] = st.round1[partyId].commCoeffs;
+            publicInputs[2] = st.round1Data[partyId].commShare.x;
+            publicInputs[3] = st.round1Data[partyId].commShare.y;
+            publicInputs[4] = st.round1Data[partyId].commCoeffs;
             publicInputs[5 + (numPeers * 3)] = threshold - 1;
             // peer keys
             for (uint256 i = 0; i < numPeers; ++i) {
@@ -476,14 +473,16 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
         // return the partyId if sender is really a participant
         uint16 partyId = _internParticipantCheck();
+        uint64 partyBit = OprfKeyGen.bit(partyId);
+        uint64 round3Mask = st.round3Mask | partyBit;
         // check that this peer did not submit anything for this round
-        if (st.round3Done[partyId]) revert AlreadySubmitted();
-        st.round3Done[partyId] = true;
+        if (st.round3Mask & partyBit != 0) revert AlreadySubmitted();
+        st.round3Mask = round3Mask;
 
         // load generated epoch before delete to emit correct value
         uint32 generatedEpoch = st.generatedEpoch;
 
-        if (allRound3Submitted(st)) {
+        if (OprfKeyGen.popcount(round3Mask) == numPeers) {
             // We are done! Register the OPRF public-key and emit event!
             if (st.generatedEpoch == 0) {
                 oprfKeyRegistry[oprfKeyId] = OprfKeyGen.RegisteredOprfPublicKey({key: st.keyAggregate, epoch: 0});
@@ -492,11 +491,15 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
                 oprfKeyRegistry[oprfKeyId].epoch = st.generatedEpoch;
             }
             // Save the current share commitments for the next reshare
-            st.prevShareCommitments = st.shareCommitments;
+            BabyJubJub.Affine[] memory commitments = new BabyJubJub.Affine[](numPeers);
+            for (uint256 i = 0; i < numPeers; ++i) {
+                commitments[i] = st.shareCommitmentAcc[i];
+            }
+            st.prevShareCommitments = commitments;
 
             emit SecretGenFinalize(oprfKeyId, st.generatedEpoch);
-            // cleanup all old data - we need to keep shareCommitments though otherwise we can't do reshares
-            st.reset(numPeers, peerAddresses);
+            // the round data is left in storage and invalidated by the next init
+            st.reset();
         }
         // Emit the transaction confirmation
         emit KeyGenConfirmation(oprfKeyId, partyId, 3, generatedEpoch);
@@ -536,7 +539,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         // check if we are in correct round
         if (st.currentRound != OprfKeyGen.Round.TWO) revert WrongRound(st.currentRound);
         // check if we are a producer
-        if (OprfKeyGen.KeyGenRole.PRODUCER != st.nodeRoles[msg.sender]) {
+        if (st.producerMask & OprfKeyGen.bit(peer.partyId) == 0) {
             // we are not a producer -> return empty array
             return new BabyJubJub.Affine[](0);
         }
@@ -580,20 +583,17 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that round2 ciphers are finished
         if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
-        if (st.generatedEpoch == 0) {
-            // this is a key-gen so just send all ciphers
-            return st.round2[peer.partyId];
-        } else {
-            // this is a reshare -> find the contributions by the producers
-            OprfKeyGen.SecretGenCiphertext[] memory ciphers = new OprfKeyGen.SecretGenCiphertext[](threshold);
-            uint256 counter = 0;
-            for (uint256 i = 0; i < numPeers; ++i) {
-                if (OprfKeyGen.KeyGenRole.PRODUCER == st.nodeRoles[peerAddresses[i]]) {
-                    ciphers[counter++] = st.round2[peer.partyId][i];
-                }
+        // for a key-gen everyone is a producer, for a reshare only the producers' contributions are returned
+        uint64 producerMask = st.producerMask;
+        OprfKeyGen.SecretGenCiphertext[] memory ciphers =
+            new OprfKeyGen.SecretGenCiphertext[](OprfKeyGen.popcount(producerMask));
+        uint256 counter = 0;
+        for (uint256 i = 0; i < numPeers; ++i) {
+            if (producerMask & OprfKeyGen.bit(i) != 0) {
+                ciphers[counter++] = st.round2Data[peer.partyId][i];
             }
-            return ciphers;
         }
+        return ciphers;
     }
 
     /// @inheritdoc IOprfKeyRegistry
@@ -630,35 +630,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         return oprfPublicKey;
     }
 
-    function allRound1Submitted(OprfKeyGen.OprfKeyGenState storage st) internal view virtual returns (bool) {
-        for (uint256 i = 0; i < numPeers; ++i) {
-            if (OprfKeyGen.KeyGenRole.NOT_READY == st.nodeRoles[peerAddresses[i]]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function allProducersRound2Submitted(uint256 necessaryProducers, OprfKeyGen.OprfKeyGenState storage st)
-        internal
-        view
-        virtual
-        returns (bool)
-    {
-        uint256 submissions = 0;
-        for (uint256 i = 0; i < numPeers; ++i) {
-            if (st.round2Done[i]) submissions += 1;
-        }
-        return submissions == necessaryProducers;
-    }
-
-    function allRound3Submitted(OprfKeyGen.OprfKeyGenState storage st) internal view virtual returns (bool) {
-        for (uint256 i = 0; i < numPeers; ++i) {
-            if (!st.round3Done[i]) return false;
-        }
-        return true;
-    }
-
     function _addRound1Contribution(uint160 oprfKeyId, uint256 partyId, OprfKeyGen.Round1Contribution calldata data)
         internal
         returns (OprfKeyGen.OprfKeyGenState storage)
@@ -668,11 +639,13 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
         // check that we are in correct round
         if (st.currentRound != OprfKeyGen.Round.ONE) revert WrongRound(st.currentRound);
-        // check that the provided ephPubKey is distinct to prevent replay attacks
-        _ephKeyUniqueCheck(st, data.ephPubKey);
+        uint64 round1Mask = st.round1Mask;
         // check that we don't have double submission
-        if (!st.round1[partyId].commShare.isEmpty()) revert AlreadySubmitted();
-        st.round1[partyId] = data;
+        if (round1Mask & OprfKeyGen.bit(partyId) != 0) revert AlreadySubmitted();
+        // check that the provided ephPubKey is distinct to prevent replay attacks
+        _ephKeyUniqueCheck(st, round1Mask, data.ephPubKey);
+        st.round1Data[partyId] = data;
+        st.round1Mask = round1Mask | OprfKeyGen.bit(partyId);
         return st;
     }
 
@@ -683,7 +656,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     {
         BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](numPeers);
         for (uint256 i = 0; i < numPeers; ++i) {
-            pubKeyList[i] = st.round1[i].ephPubKey;
+            pubKeyList[i] = st.round1Data[i].ephPubKey;
         }
         return pubKeyList;
     }
@@ -693,11 +666,12 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         view
         returns (BabyJubJub.Affine[] memory)
     {
-        BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](st.numProducers);
+        uint64 producerMask = st.producerMask;
+        BabyJubJub.Affine[] memory pubKeyList = new BabyJubJub.Affine[](OprfKeyGen.popcount(producerMask));
         uint256 counter = 0;
         for (uint256 i = 0; i < numPeers; ++i) {
-            if (OprfKeyGen.KeyGenRole.PRODUCER == st.nodeRoles[peerAddresses[i]]) {
-                pubKeyList[counter++] = st.round1[i].ephPubKey;
+            if (producerMask & OprfKeyGen.bit(i) != 0) {
+                pubKeyList[counter++] = st.round1Data[i].ephPubKey;
             }
         }
         return pubKeyList;
@@ -709,14 +683,13 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         OprfKeyGen.OprfKeyGenState storage st
     ) internal virtual {
         if (st.currentRound != OprfKeyGen.Round.ONE) return;
-        if (!allRound1Submitted(st)) return;
-        if (st.numProducers < necessaryContributions) {
+        if (OprfKeyGen.popcount(st.round1Mask) != numPeers) return;
+        if (st.numProducersOf() < necessaryContributions) {
             // everyone contributed but we are don't have enough producers. This is an alert and we need to abort!
             emit NotEnoughProducers(oprfKeyId);
             st.currentRound = OprfKeyGen.Round.STUCK;
         } else {
             st.currentRound = OprfKeyGen.Round.TWO;
-            st.shareCommitments = new BabyJubJub.Affine[](numPeers);
             emit SecretGenRound2(oprfKeyId, st.generatedEpoch);
         }
     }
@@ -727,7 +700,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         OprfKeyGen.OprfKeyGenState storage st
     ) internal virtual {
         if (st.currentRound != OprfKeyGen.Round.TWO) return;
-        if (!allProducersRound2Submitted(necessaryContributions, st)) return;
+        if (OprfKeyGen.popcount(st.round2Mask) != necessaryContributions) return;
 
         st.currentRound = OprfKeyGen.Round.THREE;
         if (st.generatedEpoch == 0) {
@@ -738,11 +711,12 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     }
 
     // Expects that callsite enforces that point is on the curve and in the correct sub-group (i.e. call _curveCheck).
-    function _addToAggregate(BabyJubJub.Affine storage keyAggregate, BabyJubJub.Affine memory commShare)
+    // `overwrite` marks the first contribution of a run: the stored aggregate is stale from a previous run then.
+    function _addToAggregate(BabyJubJub.Affine storage keyAggregate, BabyJubJub.Affine memory commShare, bool overwrite)
         internal
         virtual
     {
-        if (keyAggregate.isEmpty()) {
+        if (overwrite) {
             // We checked above that the point is on curve, so we can just set it
             keyAggregate.x = commShare.x;
             keyAggregate.y = commShare.y;
@@ -776,16 +750,16 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     // which is a BabyJubJub point in affine coordinates.
     //
     // This method iterates over all ephemeral public keys submitted in round 1
-    // (including uninitialized entries) and checks that the provided public key
+    // of the current run (`round1Mask`) and checks that the provided public key
     // (`needle`) is unique.
-    function _ephKeyUniqueCheck(OprfKeyGen.OprfKeyGenState storage st, BabyJubJub.Affine calldata needle)
-        internal
-        view
-        virtual
-    {
+    function _ephKeyUniqueCheck(
+        OprfKeyGen.OprfKeyGenState storage st,
+        uint64 round1Mask,
+        BabyJubJub.Affine calldata needle
+    ) internal view virtual {
         // Ensure that the provided ephemeral public key is distinct to prevent replay attacks.
         for (uint256 i = 0; i < numPeers; ++i) {
-            if (BabyJubJub.isEqual(st.round1[i].ephPubKey, needle)) {
+            if (round1Mask & OprfKeyGen.bit(i) != 0 && BabyJubJub.isEqual(st.round1Data[i].ephPubKey, needle)) {
                 revert BadContribution();
             }
         }

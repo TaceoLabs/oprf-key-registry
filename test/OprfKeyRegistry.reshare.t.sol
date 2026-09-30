@@ -415,7 +415,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         reshare2();
     }
 
-    function initReshare(uint160 oprfKeyId, uint32 generatedEpoch) private {
+    function initReshare(uint160 oprfKeyId, uint32 generatedEpoch) internal {
         vm.prank(taceoAdmin);
         vm.expectEmit(true, true, true, true);
         emit IOprfKeyRegistry.ReshareRound1(oprfKeyId, THRESHOLD, generatedEpoch);
@@ -423,7 +423,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare1Round1Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
+    function reshare1Round1Contributions(uint160 oprfKeyId, uint32 generatedEpoch) internal {
         // carol is a consumer here
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
@@ -446,7 +446,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare1Round2Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
+    function reshare1Round2Contributions(uint160 oprfKeyId, uint32 generatedEpoch) internal {
         // do round 2 contributions
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
@@ -467,7 +467,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare1Round3Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
+    function reshare1Round3Contributions(uint160 oprfKeyId, uint32 generatedEpoch) internal {
         // do round 3 contributions
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
@@ -498,7 +498,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare2Round1Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
+    function reshare2Round1Contributions(uint160 oprfKeyId, uint32 generatedEpoch) internal {
         // alice is a consumer here
         vm.prank(bob);
         vm.expectEmit(true, true, true, true);
@@ -521,7 +521,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare2Round2Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
+    function reshare2Round2Contributions(uint160 oprfKeyId, uint32 generatedEpoch) internal {
         vm.prank(carol);
         vm.expectEmit(true, true, true, true);
         emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 2, 2, generatedEpoch);
@@ -541,7 +541,7 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         vm.stopPrank();
     }
 
-    function reshare2Round3Contributions(uint160 oprfKeyId, uint32 generatedEpoch) private {
+    function reshare2Round3Contributions(uint160 oprfKeyId, uint32 generatedEpoch) internal {
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
         emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 0, 3, generatedEpoch);
