@@ -24,6 +24,7 @@ contract OprfKeyRegistryUpgradeFromV2BytecodeTest is OprfKeyRegistryReshareTest 
             impl := create(0, add(code, 0x20), mload(code))
         }
         require(impl != address(0), "old impl deployment failed");
+        expectRound2CiphersEvent = false;
 
         bytes memory initData = abi.encodeWithSelector(
             OprfKeyRegistry.initialize.selector, initOwner, taceoAdmin, verifierKeyGen, THRESHOLD, MAX_PEERS
@@ -41,6 +42,7 @@ contract OprfKeyRegistryUpgradeFromV2BytecodeTest is OprfKeyRegistryReshareTest 
     function _upgradeToCurrent() private {
         OprfKeyRegistryV2 impl = new OprfKeyRegistryV2();
         UUPSUpgradeable(address(proxy)).upgradeToAndCall(address(impl), "");
+        expectRound2CiphersEvent = true;
     }
 
     function testUpgradeAfterKeyGenThenReshareTwice() public {

@@ -449,6 +449,12 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
     function reshare1Round2Contributions(uint160 oprfKeyId, uint32 generatedEpoch) internal {
         // do round 2 contributions
         vm.prank(alice);
+        if (expectRound2CiphersEvent) {
+            vm.expectEmit(true, true, true, true);
+            emit IOprfKeyRegistry.Round2Ciphers(
+                oprfKeyId, generatedEpoch, 0, Contributions.aliceReshare1Round2Contribution().ciphers
+            );
+        }
         vm.expectEmit(true, true, true, true);
         emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 0, 2, generatedEpoch);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.aliceReshare1Round2Contribution());

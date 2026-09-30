@@ -25,6 +25,8 @@ contract OprfKeyRegistryKeyGenTest is Test {
     address carol = address(0x3);
     address taceoAdmin = address(0x4);
     address initOwner = 0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496; // the default addr of this test contract
+    // implementations before this one do not emit `Round2Ciphers`; the bytecode-upgrade tests switch this off
+    bool internal expectRound2CiphersEvent = true;
 
     function setUp() public {
         verifierKeyGen = new VerifierKeyGen13();
@@ -329,6 +331,10 @@ contract OprfKeyRegistryKeyGenTest is Test {
 
     function keyGenRound2Contributions(uint160 oprfKeyId) internal {
         vm.prank(bob);
+        if (expectRound2CiphersEvent) {
+            vm.expectEmit(true, true, true, true);
+            emit IOprfKeyRegistry.Round2Ciphers(oprfKeyId, 0, 1, Contributions.bobKeyGenRound2Contribution().ciphers);
+        }
         vm.expectEmit(true, true, true, true);
         emit IOprfKeyRegistry.KeyGenConfirmation(oprfKeyId, 1, 2, 0);
         oprfKeyRegistry.addRound2Contribution(oprfKeyId, Contributions.bobKeyGenRound2Contribution());
