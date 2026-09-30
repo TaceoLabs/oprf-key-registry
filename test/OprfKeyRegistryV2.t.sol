@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
+import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
 import {Contributions} from "./Contributions.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IOprfKeyRegistry} from "../src/IOprfKeyRegistry.sol";
@@ -39,6 +40,35 @@ contract OprfKeyRegistryV2Test is Test {
         peerAddresses[1] = bob;
         peerAddresses[2] = carol;
         oprfKeyRegistry.registerOprfPeers(peerAddresses);
+    }
+
+    function testCurveChecksRejectSmallOrderPoint() public {
+        uint160 oprfKeyId = 42;
+        vm.prank(taceoAdmin);
+        oprfKeyRegistry.initKeyGen(oprfKeyId);
+
+        // (0, -1) is on the curve but has order 2, so it is not in the prime-order subgroup
+        OprfKeyGen.Round1Contribution memory contribution = Contributions.bobKeyGenRound1Contribution();
+        contribution.commShare = BabyJubJub.Affine({x: 0, y: BabyJubJub.Q - 1});
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.BadContribution.selector));
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, contribution);
+
+        // identity is rejected as well
+        contribution.commShare = BabyJubJub.Affine({x: 0, y: 1});
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.BadContribution.selector));
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, contribution);
+
+        // off-curve point is rejected
+        contribution.commShare = BabyJubJub.Affine({x: 1, y: 2});
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.BadContribution.selector));
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, contribution);
+
+        // valid contribution still accepted
+        vm.prank(bob);
+        oprfKeyRegistry.addRound1KeyGenContribution(oprfKeyId, Contributions.bobKeyGenRound1Contribution());
     }
 
     function testReportKeyGenStuckFromParticipant() public {
