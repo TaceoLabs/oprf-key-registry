@@ -55,110 +55,107 @@ library OprfKeyGen {
     }
 
     struct OprfKeyGenState {
+        // ---- legacy fields (written by v1/v2, no longer used). Kept for storage-layout compatibility. ----
         mapping(address => KeyGenRole) nodeRoles;
         uint256[] lagrangeCoeffs;
         Round1Contribution[] round1;
         SecretGenCiphertext[][] round2;
         BabyJubJub.Affine[] shareCommitments;
+        // ---- live fields ----
+        // share commitments of the last finalized key-gen/reshare, checked in the next reshare's round 1
         BabyJubJub.Affine[] prevShareCommitments;
+        // running total of the round 1 commitments during a key-gen (becomes the OPRF public-key)
         BabyJubJub.Affine keyAggregate;
+        // legacy, replaced by popcount(producerMask)
         uint32 numProducers;
         uint32 generatedEpoch;
+        // legacy, replaced by round2Mask/round3Mask
         bool[] round2Done;
         bool[] round3Done;
         Round currentRound;
+        // ---- appended in v3: round data keyed by party id, submissions tracked by bitmasks. ----
+        // Nothing below is ever cleared; an entry is valid iff the corresponding mask bit is set for the current run.
+        // Overwriting stale slots is much cheaper than zeroing and re-allocating them (EIP-3529).
+        uint64 round1Mask;
+        uint64 producerMask;
+        uint64 round2Mask;
+        uint64 round3Mask;
+        mapping(uint256 => Round1Contribution) round1Data;
+        // receiver party id => sender party id => ciphertext
+        mapping(uint256 => mapping(uint256 => SecretGenCiphertext)) round2Data;
+        // per receiver: aggregate of the round 2 commitments of the current run
+        mapping(uint256 => BabyJubJub.Affine) shareCommitmentAcc;
     }
+
+    /// @dev Bitmasks are uint64, so at most 64 peers are supported.
+    uint256 internal constant MAX_PEERS = 64;
 
     /// @notice Initializes the internal state for a new OPRF key-generation process.
     ///
-    /// @dev Resets all round-specific data structures and prepares the state for Round 1. Allocates fresh storage for all rounds based on the provided numPeers.
+    /// @dev Only resets the bookkeeping; round data is invalidated by clearing the masks.
     ///
     /// @param st The key-generation state to initialize.
-    /// @param numPeers The total number of participating peers.
-    function initKeyGen(OprfKeyGenState storage st, uint256 numPeers) internal {
-        st.currentRound = Round.ONE;
-        st.generatedEpoch = 0;
-        st.round1 = new Round1Contribution[](numPeers);
-        st.round2 = new SecretGenCiphertext[][](numPeers);
-        for (uint256 i = 0; i < numPeers; i++) {
-            st.round2[i] = new SecretGenCiphertext[](numPeers);
-        }
-        st.shareCommitments = new BabyJubJub.Affine[](numPeers);
-        st.prevShareCommitments = new BabyJubJub.Affine[](numPeers);
-        st.round2Done = new bool[](numPeers);
-        st.round3Done = new bool[](numPeers);
+    function initKeyGen(OprfKeyGenState storage st) internal {
+        _init(st, 0);
     }
 
     /// @notice Initializes the internal state for an OPRF reshare process.
     ///
-    /// @dev Resets round-specific data while preserving the previous share
-    /// commitments for input verification. Additionally, clears lagrange coefficients which we didn't do in key-gen because we only set them during reshares.
+    /// @dev Preserves the previous share commitments for input verification.
     ///
     /// @param st The key-generation state to initialize.
-    /// @param numPeers The total number of participating peers.
     /// @param generatedEpoch The new epoch to assign to the reshared key.
-    function initReshare(OprfKeyGenState storage st, uint256 numPeers, uint32 generatedEpoch) internal {
-        delete st.lagrangeCoeffs;
-
-        st.currentRound = Round.ONE;
-        st.generatedEpoch = generatedEpoch;
-        st.round1 = new Round1Contribution[](numPeers);
-        st.round2 = new SecretGenCiphertext[][](numPeers);
-        for (uint256 i = 0; i < numPeers; i++) {
-            st.round2[i] = new SecretGenCiphertext[](numPeers);
-        }
-        st.shareCommitments = new BabyJubJub.Affine[](numPeers);
-        st.round2Done = new bool[](numPeers);
-        st.round3Done = new bool[](numPeers);
+    function initReshare(OprfKeyGenState storage st, uint32 generatedEpoch) internal {
+        _init(st, generatedEpoch);
     }
 
     /// @notice Resets the key-generation state to allow a fresh initialization.
     ///
-    /// @dev Clears all round-specific data and node roles, but keeps the key ID
-    /// reusable. Sets the current round to `NOT_STARTED`.
+    /// @dev Round data stays in storage but is invalidated at the next init. Sets the current round to `NOT_STARTED`.
     ///
     /// @param st The key-generation state to reset.
-    /// @param numPeers The total number of participating peers.
-    /// @param peerAddresses The addresses of the participating peers.
-    function reset(OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) internal {
-        _reset(st, numPeers, peerAddresses);
+    function reset(OprfKeyGenState storage st) internal {
         st.currentRound = Round.NOT_STARTED;
     }
 
     /// @notice Deletes the key-generation state permanently.
     ///
-    /// @dev Clears all associated state and marks the key ID as deleted to prevent
+    /// @dev Clears the persistent share commitments and marks the key ID as deleted to prevent
     /// reuse. Sets the current round to `DELETED`.
     ///
     /// @param st The key-generation state to delete.
-    /// @param numPeers The total number of participating peers.
-    /// @param peerAddresses The addresses of the participating peers.
-    function deleteSt(OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) internal {
-        _reset(st, numPeers, peerAddresses);
-        delete st.lagrangeCoeffs;
+    function deleteSt(OprfKeyGenState storage st) internal {
         delete st.prevShareCommitments;
+        delete st.keyAggregate;
         st.currentRound = Round.DELETED;
     }
 
-    /// @notice Internal helper to clear round-specific key-generation state.
-    ///
-    /// @dev Deletes all transient protocol data and node role assignments.
-    /// Does not modify the `currentRound` field.
-    ///
-    /// @param st The key-generation state to clear.
-    /// @param numPeers The total number of participating peers.
-    /// @param peerAddresses The addresses of the participating peers.
-    function _reset(OprfKeyGenState storage st, uint256 numPeers, address[] memory peerAddresses) private {
-        delete st.keyAggregate;
-        delete st.round2Done;
-        delete st.round3Done;
-        delete st.round1;
-        delete st.round2;
-        delete st.numProducers;
-        delete st.generatedEpoch;
-        for (uint256 i = 0; i < numPeers; i++) {
-            delete st.nodeRoles[peerAddresses[i]];
+    function _init(OprfKeyGenState storage st, uint32 generatedEpoch) private {
+        st.currentRound = Round.ONE;
+        st.generatedEpoch = generatedEpoch;
+        st.round1Mask = 0;
+        st.producerMask = 0;
+        st.round2Mask = 0;
+        st.round3Mask = 0;
+    }
+
+    /// @notice Returns the bit of the given party in the masks.
+    function bit(uint256 partyId) internal pure returns (uint64) {
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return uint64(1 << partyId);
+    }
+
+    /// @notice Number of set bits.
+    function popcount(uint64 mask) internal pure returns (uint256 count) {
+        uint256 m = mask;
+        while (m != 0) {
+            m &= m - 1;
+            ++count;
         }
-        delete st.shareCommitments;
+    }
+
+    /// @notice Number of producers of the current run.
+    function numProducersOf(OprfKeyGenState storage st) internal view returns (uint256) {
+        return popcount(st.producerMask);
     }
 }

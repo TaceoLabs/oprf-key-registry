@@ -12,6 +12,7 @@ memory_limit = 1073741824
 gas_limit = "18446744073709551615"
 build_info = true
 extra_output = ["storageLayout"]
+fs_permissions = [{ access = "read", path = "./test/fixtures" }]
 
 [lint]
 exclude_lints = [
