@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {BabyJubJub} from "@taceo/babyjubjub/BabyJubJub.sol";
 import {OprfKeyGen} from "./OprfKeyGen.sol";
 import {OprfKeyRegistry} from "./OprfKeyRegistry.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
@@ -15,6 +16,8 @@ import {IOprfKeyRegistryV2} from "./IOprfKeyRegistryV2.sol";
 /// - Adds ERC165 support.
 /// - Adds `getPeerAddresses`. Returns the full array of addresses of registered peers
 /// - Adds `isParticipant(address addr)`. Returns true iff the provided address is in the list of participants
+/// - Bumps `babyjubjub-solidity` to v1.2.0 and overrides `_curveChecks` to use the cheaper Tate-pairing based
+///   subgroup membership check (`BabyJubJub.isValidPoint`). Accepts exactly the same set of points as before.
 /// @custom:oz-upgrades-from OprfKeyRegistry
 contract OprfKeyRegistryV2 is OprfKeyRegistry, IOprfKeyRegistryV2, ERC165 {
     /// @inheritdoc IOprfKeyRegistryV2
@@ -50,5 +53,11 @@ contract OprfKeyRegistryV2 is OprfKeyRegistry, IOprfKeyRegistryV2, ERC165 {
     /// @inheritdoc IOprfKeyRegistryV2
     function isParticipant(address addr) public view virtual onlyProxy returns (bool) {
         return addressToPeer[addr].isParticipant;
+    }
+
+    /// @dev Same checks as `OprfKeyRegistry._curveChecks` (rejects identity, off-curve and non-prime-order points),
+    ///      but uses the Tate-pairing based subgroup check.
+    function _curveChecks(BabyJubJub.Affine memory element) internal view virtual override {
+        if (BabyJubJub.isIdentity(element) || !BabyJubJub.isValidPoint(element)) revert BadContribution();
     }
 }

@@ -1,8 +1,8 @@
 {
   "lib/babyjubjub-solidity": {
     "tag": {
-      "name": "v1.0.0",
-      "rev": "4202e8794c44cf3f894c910354c0567b659e6669"
+      "name": "v1.2.0",
+      "rev": "01ada24596306363885b5c3059484a7c17e2b68f"
     }
   },
   "lib/forge-std": {
