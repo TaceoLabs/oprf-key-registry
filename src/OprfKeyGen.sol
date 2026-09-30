@@ -81,8 +81,6 @@ library OprfKeyGen {
         uint64 round2Mask;
         uint64 round3Mask;
         mapping(uint256 => Round1Contribution) round1Data;
-        // receiver party id => sender party id => ciphertext
-        mapping(uint256 => mapping(uint256 => SecretGenCiphertext)) round2Data;
         // per receiver: aggregate of the round 2 commitments of the current run
         mapping(uint256 => BabyJubJub.Affine) shareCommitmentAcc;
     }

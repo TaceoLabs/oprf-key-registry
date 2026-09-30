@@ -379,7 +379,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
             for (uint256 i = 0; i < numPeers; ++i) {
                 _curveChecks(data.ciphers[i].commitment);
                 _addToAggregate(st.shareCommitmentAcc[i], data.ciphers[i].commitment, first);
-                st.round2Data[i][partyId] = data.ciphers[i];
             }
         } else {
             // for the reshare we need to use the lagrange coefficients as here the resulting shamir-share is shared with shamir sharing
@@ -389,11 +388,12 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
                 _curveChecks(data.ciphers[i].commitment);
                 BabyJubJub.Affine memory lagrangeResult = BabyJubJub.scalarMul(lagrange, data.ciphers[i].commitment);
                 _addToAggregate(st.shareCommitmentAcc[i], lagrangeResult, first);
-                st.round2Data[i][partyId] = data.ciphers[i];
             }
         }
         // set the contribution to done
         st.round2Mask = round2Mask | partyBit;
+        // the ciphertexts are only needed by the peers, so they are emitted instead of stored
+        emit Round2Ciphers(oprfKeyId, st.generatedEpoch, partyId, data.ciphers);
 
         // last step verify the proof and potentially revert if proof fails
 
@@ -565,35 +565,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
         // load the producer's keys for decryption
         return _loadProducerPeerPublicKeys(st);
-    }
-
-    /// @inheritdoc IOprfKeyRegistry
-    function checkIsParticipantAndReturnRound2Ciphers(uint160 oprfKeyId)
-        public
-        view
-        virtual
-        onlyProxy
-        isReady
-        returns (OprfKeyGen.SecretGenCiphertext[] memory)
-    {
-        // check if a participant
-        OprfKeyGen.OprfPeer memory peer = addressToPeer[msg.sender];
-        if (!peer.isParticipant) revert NotAParticipant();
-        // check if there exists this a key-gen
-        OprfKeyGen.OprfKeyGenState storage st = runningKeyGens[oprfKeyId];
-        // check that round2 ciphers are finished
-        if (st.currentRound != OprfKeyGen.Round.THREE) revert WrongRound(st.currentRound);
-        // for a key-gen everyone is a producer, for a reshare only the producers' contributions are returned
-        uint64 producerMask = st.producerMask;
-        OprfKeyGen.SecretGenCiphertext[] memory ciphers =
-            new OprfKeyGen.SecretGenCiphertext[](OprfKeyGen.popcount(producerMask));
-        uint256 counter = 0;
-        for (uint256 i = 0; i < numPeers; ++i) {
-            if (producerMask & OprfKeyGen.bit(i) != 0) {
-                ciphers[counter++] = st.round2Data[peer.partyId][i];
-            }
-        }
-        return ciphers;
     }
 
     /// @inheritdoc IOprfKeyRegistry

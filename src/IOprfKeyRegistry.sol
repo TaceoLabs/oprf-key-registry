@@ -43,6 +43,20 @@ interface IOprfKeyRegistry {
     /// @param epoch The epoch: 0 for the initial key-gen, or the new reshare epoch during a reshare.
     event SecretGenRound2(uint160 indexed oprfKeyId, uint32 indexed epoch);
 
+    /// @notice Emitted with every Round 2 contribution. Carries the producer's ciphertexts for all peers (index = receiver's
+    /// party ID); peers collect these instead of reading them from storage. Only ciphertexts emitted after the latest
+    /// `SecretGenRound1`/`ReshareRound1` event of this key belong to the current run (an aborted run leaves stale events).
+    /// @param oprfKeyId The unique identifier for the OPRF key process.
+    /// @param epoch The epoch: 0 for the initial key-gen, or the new reshare epoch during a reshare.
+    /// @param partyId The party ID of the producer.
+    /// @param ciphers The ciphertexts, one per peer.
+    event Round2Ciphers(
+        uint160 indexed oprfKeyId,
+        uint32 indexed epoch,
+        uint16 indexed partyId,
+        OprfKeyGen.SecretGenCiphertext[] ciphers
+    );
+
     /// @notice Emitted once enough producers have submitted Round 2 for a key-gen, signaling all peers to submit Round 3.
     /// @param oprfKeyId The unique identifier for the OPRF key process.
     event SecretGenRound3(uint160 indexed oprfKeyId);
@@ -267,14 +281,6 @@ interface IOprfKeyRegistry {
     /// @param oprfKeyId The unique identifier for the OPRF public-key.
     /// @return The ephemeral public keys OF THE PRODUCERS generated in round 1
     function loadPeerPublicKeysForConsumers(uint160 oprfKeyId) external view returns (BabyJubJub.Affine[] memory);
-
-    /// @notice Checks if the caller is a registered OPRF participant and returns their Round 2 ciphertexts for the specified key-gen.
-    /// @param oprfKeyId The unique identifier for the OPRF public-key.
-    /// @return An array of Round 2 ciphertexts belonging to the caller.
-    function checkIsParticipantAndReturnRound2Ciphers(uint160 oprfKeyId)
-        external
-        view
-        returns (OprfKeyGen.SecretGenCiphertext[] memory);
 
     /// @notice Retrieves the specified OPRF public-key.
     /// @param oprfKeyId The unique identifier for the OPRF public-key.

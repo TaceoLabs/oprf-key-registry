@@ -24,6 +24,8 @@ import {IOprfKeyRegistryV2} from "./IOprfKeyRegistryV2.sol";
 ///   The legacy array fields stay in place (storage layout unchanged, see test/OprfKeyRegistryUpgradeFromV2Bytecode.t.sol).
 ///   Upgrade prerequisite: key-gens/reshares that are in progress at upgrade time cannot be continued and must be
 ///   aborted (`abortKeyGen`) and restarted; finalized keys and their share commitments carry over unchanged.
+/// - Round 2 ciphertexts are emitted (`Round2Ciphers`) instead of stored; `checkIsParticipantAndReturnRound2Ciphers`
+///   is removed. Peers collect the ciphertexts from the events of the current run.
 /// @custom:oz-upgrades-from OprfKeyRegistry
 contract OprfKeyRegistryV2 is OprfKeyRegistry, IOprfKeyRegistryV2, ERC165 {
     /// @inheritdoc IOprfKeyRegistryV2
