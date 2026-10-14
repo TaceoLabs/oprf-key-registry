@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-10-14
+
+### ⛰️ Features
+
+- Bump babyjubjub to v1.2.0 and use the cheaper subgroup checks ([6d72c3c](https://github.com/TaceoLabs/oprf-key-registry/commit/6d72c3c63e78b44e7d973dc4e9e4844945f33095))
+- Bump babyjubjub to v1.3.0 ([c219b4c](https://github.com/TaceoLabs/oprf-key-registry/commit/c219b4c7cb2b232fc0a227cf51737a9aaa501d3d))
+
+### 🏗️ Build
+
+- Bump actions/setup-node from 6 to 7 (#58) ([87e818e](https://github.com/TaceoLabs/oprf-key-registry/commit/87e818e1d5d54bcebd6907c70ac894eac086a40b))
+- Bump orhun/git-cliff-action from 4.8.0 to 4.9.1 (#63) ([cc13c40](https://github.com/TaceoLabs/oprf-key-registry/commit/cc13c404171118c03664d62b0d437862c373e6c2))
+- Bump softprops/action-gh-release from 2.6.2 to 3.0.3 (#61) ([afd1f58](https://github.com/TaceoLabs/oprf-key-registry/commit/afd1f5814b51ad8f85922fe1a31d78a0cb1fc318))
+
 ## [2.0.0] - 2026-07-14
 
 ### ⛰️ Features
