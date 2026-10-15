@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
 import {OprfKeyRegistry} from "../src/OprfKeyRegistry.sol";
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 contract PrintInformationScript is Script {
     OprfKeyRegistry public oprfKeyRegistry;
@@ -19,6 +20,9 @@ contract PrintInformationScript is Script {
         address owner = oprfKeyRegistry.owner();
         uint256 threshold = oprfKeyRegistry.threshold();
         uint256 numPeers = oprfKeyRegistry.numPeers();
+        address implementation =
+            address(uint160(uint256(vm.load(address(oprfKeyRegistry), ERC1967Utils.IMPLEMENTATION_SLOT))));
+        console.log("implementation:", implementation);
         console.log("isContractReady:", isContractReady);
         console.log("amountAdmins:", amountAdmins);
         console.log("keyGenVerifier:", keyGenVerifier);
