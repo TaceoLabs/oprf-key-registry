@@ -123,7 +123,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     // ==================================
 
     /// @inheritdoc IOprfKeyRegistry
-    function revokeKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized onlyAdmin {
+    function revokeKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized adminOrOwner {
         // if the _keygenAdmin is an admin, we remove them
         if (keygenAdmins[_keygenAdmin]) {
             if (amountKeygenAdmins == 1) {
@@ -670,8 +670,8 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         if (st.currentRound != OprfKeyGen.Round.ONE) revert WrongRound(st.currentRound);
         // check that the provided ephPubKey is distinct to prevent replay attacks
         _ephKeyUniqueCheck(st, data.ephPubKey);
-        // check that we don't have double submission
-        if (!st.round1[partyId].commShare.isEmpty()) revert AlreadySubmitted();
+        // check that we don't have double submission. We check ephPubKey as commShare is empty for reshare consumers
+        if (!st.round1[partyId].ephPubKey.isEmpty()) revert AlreadySubmitted();
         st.round1[partyId] = data;
         return st;
     }
