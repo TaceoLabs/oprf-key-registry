@@ -151,7 +151,8 @@ interface IOprfKeyRegistry {
     /// @dev This function is intended as an emergency measure (e.g. key loss).
     /// In the future, revocation should require threshold authentication.
     /// Currently, any admin may revoke another admin, meaning a single admin
-    /// can remove all others except the last remaining one.
+    /// can remove all others except the last remaining one. The owner may
+    /// also revoke admins without being an admin itself.
     ///
     /// @param _keygenAdmin The admin address to revoke
     function revokeKeyGenAdmin(address _keygenAdmin) external;
