@@ -303,6 +303,23 @@ contract OprfKeyRegistryReshareTest is Test, OprfKeyRegistryKeyGenTest {
         reshare1();
     }
 
+    function testReshareConsumerResubmitRound1() public {
+        testKeyGen();
+        uint160 oprfKeyId = 42;
+        initReshare(oprfKeyId, 1);
+
+        // carol registers as consumer
+        vm.prank(carol);
+        oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, Contributions.carolReshare1Round1Contribution());
+
+        // resubmitting with a fresh ephemeral key must fail
+        OprfKeyGen.Round1Contribution memory resubmit = Contributions.carolReshare1Round1Contribution();
+        resubmit.ephPubKey = Contributions.carolReshare2Round1Contribution().ephPubKey;
+        vm.prank(carol);
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.AlreadySubmitted.selector));
+        oprfKeyRegistry.addRound1ReshareContribution(oprfKeyId, resubmit);
+    }
+
     function testAbortReshareBeforeRound2() public {
         // make a normal key-gen for id 42;
         testKeyGen();
