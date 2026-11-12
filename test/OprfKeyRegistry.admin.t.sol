@@ -288,6 +288,27 @@ contract OprfKeyRegistryTest is Test {
         vm.stopPrank();
     }
 
+    function testOwnerRevokesAdmin() public {
+        vm.prank(taceoAdmin);
+        oprfKeyRegistry.addKeyGenAdmin(alice);
+
+        // the owner is not an admin but may still revoke
+        vm.expectEmit(true, true, true, true);
+        emit IOprfKeyRegistry.KeyGenAdminRevoked(taceoAdmin);
+        oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
+        assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
+
+        // but not the last one
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.LastAdmin.selector));
+        oprfKeyRegistry.revokeKeyGenAdmin(alice);
+    }
+
+    function testRevokeAdminNotAdminOrOwner() public {
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.OnlyAdmin.selector));
+        oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
+    }
+
     function testRevokeAdminThatIsNoAdmin() public {
         vm.startPrank(taceoAdmin);
         vm.recordLogs();
