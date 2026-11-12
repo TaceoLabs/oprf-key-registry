@@ -1,0 +1,12 @@
+{
+  "initKeyGen": "425344",
+  "round1_alice": "243432",
+  "round1_bob": "280907",
+  "round1_carol_last": "265268",
+  "round2_alice": "818252",
+  "round2_bob": "918039",
+  "round2_carol_last": "822475",
+  "round3_alice": "65307",
+  "round3_bob": "48625",
+  "round3_carol_last": "483592"
+}
