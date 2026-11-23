@@ -255,7 +255,6 @@ contract OprfKeyRegistryTest is Test {
 
     function testInitKeyGenRevokeRegisterAdmin() public {
         uint160 oprfKeyId = 42;
-        vm.startPrank(taceoAdmin);
         // register another admin
         vm.expectEmit(true, true, true, true);
         emit IOprfKeyRegistry.KeyGenAdminRegistered(alice);
@@ -269,30 +268,24 @@ contract OprfKeyRegistryTest is Test {
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
 
         // try start key-gen as taceo
+        vm.prank(taceoAdmin);
         vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.OnlyAdmin.selector));
         oprfKeyRegistry.initKeyGen(oprfKeyId);
-        vm.stopPrank();
 
         // start key-gen as alice
         vm.prank(alice);
         oprfKeyRegistry.initKeyGen(oprfKeyId);
-        vm.stopPrank();
     }
 
     function testRevokeLastAdmin() public {
-        vm.startPrank(taceoAdmin);
-        // register another admin
         vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.LastAdmin.selector));
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
-        vm.stopPrank();
     }
 
     function testOwnerRevokesAdmin() public {
-        vm.prank(taceoAdmin);
         oprfKeyRegistry.addKeyGenAdmin(alice);
 
-        // the owner is not an admin but may still revoke
         vm.expectEmit(true, true, true, true);
         emit IOprfKeyRegistry.KeyGenAdminRevoked(taceoAdmin);
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
@@ -303,27 +296,36 @@ contract OprfKeyRegistryTest is Test {
         oprfKeyRegistry.revokeKeyGenAdmin(alice);
     }
 
-    function testRevokeAdminNotAdminOrOwner() public {
+    function testRevokeAdminNotOwner() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.OnlyAdmin.selector));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
     }
 
+    function testAdminCannotRevokeAdmin() public {
+        oprfKeyRegistry.addKeyGenAdmin(alice);
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, taceoAdmin));
+        oprfKeyRegistry.revokeKeyGenAdmin(alice);
+    }
+
+    function testAdminCannotAddAdmin() public {
+        vm.prank(taceoAdmin);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, taceoAdmin));
+        oprfKeyRegistry.addKeyGenAdmin(alice);
+    }
+
     function testRevokeAdminThatIsNoAdmin() public {
-        vm.startPrank(taceoAdmin);
         vm.recordLogs();
         oprfKeyRegistry.revokeKeyGenAdmin(alice);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
-        vm.stopPrank();
         assertEq(0, vm.getRecordedLogs().length);
     }
 
     function testRegisterAdminTwice() public {
-        vm.startPrank(taceoAdmin);
         vm.recordLogs();
         oprfKeyRegistry.addKeyGenAdmin(taceoAdmin);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
-        vm.stopPrank();
         assertEq(0, vm.getRecordedLogs().length);
     }
 

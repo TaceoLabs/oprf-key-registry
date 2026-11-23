@@ -79,17 +79,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
         }
     }
 
-    modifier adminOrOwner() {
-        _adminOrOwner();
-        _;
-    }
-
-    function _adminOrOwner() internal view {
-        bool isAdmin = keygenAdmins[msg.sender];
-        bool isOwner = owner() == msg.sender;
-        if (!isAdmin && !isOwner) revert OnlyAdmin();
-    }
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -123,7 +112,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     // ==================================
 
     /// @inheritdoc IOprfKeyRegistry
-    function revokeKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized adminOrOwner {
+    function revokeKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized onlyOwner {
         // if the _keygenAdmin is an admin, we remove them
         if (keygenAdmins[_keygenAdmin]) {
             if (amountKeygenAdmins == 1) {
@@ -144,7 +133,7 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     }
 
     /// @inheritdoc IOprfKeyRegistry
-    function addKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized adminOrOwner {
+    function addKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized onlyOwner {
         // if the _keygenAdmin is not yet an admin, we add them
         if (!keygenAdmins[_keygenAdmin]) {
             keygenAdmins[_keygenAdmin] = true;
