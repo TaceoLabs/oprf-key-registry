@@ -115,10 +115,6 @@ contract OprfKeyRegistry is IOprfKeyRegistry, Initializable, Ownable2StepUpgrade
     function revokeKeyGenAdmin(address _keygenAdmin) public virtual onlyProxy onlyInitialized onlyOwner {
         // if the _keygenAdmin is an admin, we remove them
         if (keygenAdmins[_keygenAdmin]) {
-            if (amountKeygenAdmins == 1) {
-                // we don't allow the last admin to remove themselves
-                revert LastAdmin();
-            }
             delete keygenAdmins[_keygenAdmin];
             amountKeygenAdmins -= 1;
             emit KeyGenAdminRevoked(_keygenAdmin);
