@@ -121,7 +121,7 @@ interface IOprfKeyRegistry {
     /// @notice Thrown when the contract has not yet completed `registerOprfPeers` (i.e. `isContractReady` is false).
     error NotReady();
 
-    /// @notice Thrown when the caller is not a key-generation admin (or, where applicable, the owner).
+    /// @notice Thrown when the caller is not a key-generation admin.
     error OnlyAdmin();
 
     /// @notice Thrown when `registerOprfPeers` is called with duplicate addresses.
@@ -150,9 +150,7 @@ interface IOprfKeyRegistry {
     ///
     /// @dev This function is intended as an emergency measure (e.g. key loss).
     /// In the future, revocation should require threshold authentication.
-    /// Currently, any admin may revoke another admin, meaning a single admin
-    /// can remove all others except the last remaining one. The owner may
-    /// also revoke admins without being an admin itself.
+    /// Only the owner may revoke admins.
     ///
     /// @param _keygenAdmin The admin address to revoke
     function revokeKeyGenAdmin(address _keygenAdmin) external;
@@ -168,7 +166,7 @@ interface IOprfKeyRegistry {
     /// @notice Grants key-generation admin permissions to an address.
     ///
     /// @dev In the future, adding admins should require threshold authentication.
-    /// Currently, any existing admin may add another admin.
+    /// Only the owner may add admins.
     ///
     /// @param _keygenAdmin The admin address to register
     function addKeyGenAdmin(address _keygenAdmin) external;
