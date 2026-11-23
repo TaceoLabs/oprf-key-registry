@@ -18,7 +18,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          submodules: recursive
 
       - name: Setup Node.js (includes npx)
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -34,7 +33,7 @@ jobs:
           npx --version
 
       - name: Build contracts
-        run: forge clean && forge install && forge build
+        run: forge soldeer install && forge clean && forge build
 
       - name: Run OpenZeppelin upgrades validation
         run: npx @openzeppelin/upgrades-core validate --unsafeAllowLinkedLibraries --exclude "**/*.t.sol"

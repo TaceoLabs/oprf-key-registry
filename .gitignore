@@ -12,3 +12,6 @@ docs/
 soljson-latest.js
 broadcast/
 .ignore
+
+# Soldeer
+dependencies/

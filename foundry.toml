@@ -1,7 +1,7 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = ["dependencies"]
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 # Enable optimizer
 optimizer = true
@@ -12,6 +12,12 @@ memory_limit = 1073741824
 gas_limit = "18446744073709551615"
 build_info = true
 extra_output = ["storageLayout"]
+remappings = [
+    "forge-std/=dependencies/forge-std-1.14.0/src/",
+    "@openzeppelin/contracts/=dependencies/@openzeppelin-contracts-5.5.0/",
+    "@openzeppelin/contracts-upgradeable/=dependencies/@openzeppelin-contracts-upgradeable-5.5.0/",
+    "@taceo/babyjubjub/=dependencies/babyjubjub-1.3.0/src/",
+]
 
 [lint]
 exclude_lints = [
@@ -19,3 +25,12 @@ exclude_lints = [
   "mixed-case-variable",
   "mixed-case-function"
 ]
+
+[dependencies]
+forge-std = "1.14.0"
+"@openzeppelin-contracts" = "5.5.0"
+"@openzeppelin-contracts-upgradeable" = "5.5.0"
+babyjubjub = "1.3.0"
+
+[soldeer]
+remappings_generate = false
