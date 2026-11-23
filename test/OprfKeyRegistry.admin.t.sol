@@ -278,8 +278,11 @@ contract OprfKeyRegistryTest is Test {
     }
 
     function testRevokeLastAdmin() public {
-        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.LastAdmin.selector));
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
+        assertEq(0, oprfKeyRegistry.amountKeygenAdmins());
+
+        // a new one can be added
+        oprfKeyRegistry.addKeyGenAdmin(alice);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
     }
 
@@ -290,10 +293,6 @@ contract OprfKeyRegistryTest is Test {
         emit IOprfKeyRegistry.KeyGenAdminRevoked(taceoAdmin);
         oprfKeyRegistry.revokeKeyGenAdmin(taceoAdmin);
         assertEq(1, oprfKeyRegistry.amountKeygenAdmins());
-
-        // but not the last one
-        vm.expectRevert(abi.encodeWithSelector(IOprfKeyRegistry.LastAdmin.selector));
-        oprfKeyRegistry.revokeKeyGenAdmin(alice);
     }
 
     function testRevokeAdminNotOwner() public {

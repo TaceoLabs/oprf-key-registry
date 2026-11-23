@@ -112,9 +112,6 @@ interface IOprfKeyRegistry {
     /// @notice Thrown when a proxy call is made before the implementation has been initialized.
     error ImplementationNotInitialized();
 
-    /// @notice Thrown when `revokeKeyGenAdmin` would remove the last remaining key-generation admin.
-    error LastAdmin();
-
     /// @notice Thrown when the caller is not a registered OPRF peer.
     error NotAParticipant();
 
